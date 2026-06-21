@@ -687,6 +687,7 @@ function compute(){
   buildSpanSummary(); drawSection(); buildTable(); drawHeatmap(); buildSeatTable(); buildSeatSections(); syncSectionControls(); renderSnapButtons();
   render3DAlign(); render3DSub();
   document.getElementById('plan_len').textContent='L = '+(ENG.align.staEnd-ENG.align.staStart).toFixed(1)+' ft';
+  if(_autosaveArmed) autosave();
 }
 
 /* ===== SVG VIEWPORT (pan/zoom) =====
@@ -2138,25 +2139,25 @@ function applyProject(p){
   return true;
 }
 
-let _saveTimer=null, _storageOK=true;
+let _saveTimer=null, _storageOK=true, _dirty=false, _autosaveArmed=false;
 function setStatus(msg){ const el=document.getElementById('save_status'); if(el) el.textContent=msg; }
+function saveNow(){ // immediate, non-debounced write
+  if(!_storageOK) return false;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeProject()));
+    _dirty=false; const t=new Date(); setStatus('autosaved '+t.toLocaleTimeString()); return true;
+  } catch(e){ _storageOK=false; setStatus('autosave unavailable here — use Export JSON'); return false; }
+}
 function autosave(){
   if(!_storageOK) return;
+  _dirty=true;
   clearTimeout(_saveTimer);
-  _saveTimer=setTimeout(()=>{
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeProject()));
-      const t=new Date(); setStatus('autosaved '+t.toLocaleTimeString());
-    } catch(e){
-      _storageOK=false;
-      setStatus('autosave unavailable here — use Save project');
-    }
-  }, 600);
+  _saveTimer=setTimeout(saveNow, 600);
 }
 function restoreOnOpen(){
   let raw=null;
   try { raw=localStorage.getItem(STORAGE_KEY); }
-  catch(e){ _storageOK=false; setStatus('browser storage blocked — use Save/Load project'); return false; }
+  catch(e){ _storageOK=false; setStatus('browser storage blocked — use Export/Import JSON'); return false; }
   if(!raw){ setStatus('no saved session'); return false; }
   try {
     const p=JSON.parse(raw);
@@ -2244,7 +2245,13 @@ function renderLibrary(){
 // hook autosave onto every change/click that mutates state
 function armAutosave(){
   document.addEventListener('change', autosave, true);
+  document.addEventListener('input', autosave, true);
   document.addEventListener('click', e=>{ if(e.target.closest('button')) setTimeout(autosave,50); }, true);
+  // flush any pending save before the page goes away (close/reload/navigate)
+  window.addEventListener('beforeunload', ()=>{ if(_dirty){ clearTimeout(_saveTimer); saveNow(); } });
+  // mobile/background: visibilitychange fires more reliably than beforeunload
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden' && _dirty){ clearTimeout(_saveTimer); saveNow(); } });
+  _autosaveArmed=true;
 }
 
 /* ===== INIT ===== */

@@ -1,0 +1,2294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bridge Geometry Engine</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  :root {
+    --vellum:#ECE7DA; --vellum-edge:#DED7C5; --ink:#1C1A17; --ink-soft:#5A554B;
+    --graphite:#8B8576; --cyan:#1B6E78; --oxide:#9C3B22; --good:#3F6B3A;
+    --paper:#F6F3EA;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--vellum); color: var(--ink);
+    font-family: "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif; font-size: 15px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+  input,select,textarea,th,td,button,.tabbtn,legend,label,.cap,.pill,.note { font-variant-numeric: tabular-nums; }
+  input,select,textarea,th,td,button,.tabbtn,legend,label,.cap,.pill { font-family: "SFMono-Regular","Consolas","Liberation Mono",Menlo,monospace; }
+  header { border-bottom: 2px solid var(--ink); padding: 16px 24px 0; }
+  .htop { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+  header h1 { font-size: 20px; font-weight: 600; margin: 0; }
+  header .sub { font-size: 12px; color: var(--ink-soft); letter-spacing: .06em; text-transform: uppercase; }
+  header .ver { margin-left: auto; font-size: 11px; color: var(--graphite); }
+  .tabs { display: flex; gap: 2px; }
+  .tabbtn { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; padding: 9px 18px;
+    border: 1px solid var(--graphite); border-bottom: none; background: var(--vellum-edge); color: var(--ink-soft);
+    cursor: pointer; border-radius: 4px 4px 0 0; position: relative; top: 2px; }
+  .tabbtn[aria-selected="true"] { background: var(--vellum); color: var(--ink); font-weight: 600; border-color: var(--ink); border-bottom: 2px solid var(--vellum); top: 1px; }
+  .tabbtn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  main { padding: 22px 24px 60px; max-width: 1320px; }
+  .tabpane { display: none; } .tabpane.active { display: block; }
+  .cols { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 26px; align-items: start; }
+  .cols > div { min-width: 0; }
+  @media (max-width: 1020px){ .cols { grid-template-columns: 1fr; } }
+  fieldset { border: 1px solid var(--graphite); border-radius: 2px; margin: 0 0 14px; padding: 10px 12px 12px; background: rgba(255,255,255,.18); }
+  legend { font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-soft); padding: 0 6px; }
+  label { display: block; font-size: 11px; color: var(--ink-soft); margin: 8px 0 2px; letter-spacing: .03em; }
+  input[type=number],input[type=text],select,textarea { width: 100%; padding: 5px 7px; border: 1px solid var(--graphite);
+    background: var(--paper); color: var(--ink); border-radius: 2px; font-size: 13px; }
+  textarea { line-height: 1.5; resize: vertical; }
+  input:focus,select:focus,textarea:focus { outline: 2px solid var(--cyan); outline-offset: -1px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  button { font-size: 12px; letter-spacing: .04em; cursor: pointer; border: 1px solid var(--ink); background: var(--ink); color: var(--vellum); padding: 7px 12px; border-radius: 2px; }
+  button:hover { background: var(--cyan); border-color: var(--cyan); }
+  button.ghost { background: transparent; color: var(--ink); }
+  button.ghost:hover { background: var(--vellum-edge); border-color: var(--ink); }
+  button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  button.sm { padding: 3px 9px; font-size: 11px; }
+  h2.sec { font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--ink-soft); border-bottom: 1px solid var(--graphite); padding-bottom: 5px; margin: 4px 0 14px; }
+  .svgcard { background: var(--paper); border: 1px solid var(--graphite); border-radius: 2px; margin-bottom: 18px; }
+  .svgcard .cap { font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-soft); padding: 6px 10px; border-bottom: 1px solid var(--graphite); display: flex; gap: 10px 12px; align-items: center; flex-wrap: wrap; min-height: 34px; }
+  .svgcard .cap > span:first-child { flex: 0 1 auto; }
+  .svgcard svg, .svgcard canvas { display: block; width: 100%; height: auto; }
+  .gctrl { margin-left:auto; display:flex; gap:3px; align-items:center; flex-wrap:nowrap; }
+  .gctrl button { padding:1px 7px; font-size:11px; line-height:1.4; background:transparent; color:var(--ink); border:1px solid var(--graphite); }
+  .gctrl button:hover { background:var(--cyan); color:var(--vellum); border-color:var(--cyan); }
+  .gctrl .sep { width:1px; align-self:stretch; background:var(--graphite); margin:2px 3px; }
+  .view3d { width: 100%; height: 320px; display: block; background: var(--paper); }
+  .view3d-tall { height: 460px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  th,td { border: 1px solid var(--graphite); padding: 3px 7px; text-align: right; }
+  th { background: var(--vellum-edge); font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: .06em; color: var(--ink-soft); }
+  td.lbl,th.lbl { text-align: left; }
+  tr:nth-child(even) td { background: rgba(255,255,255,.25); }
+  .delta-good { color: var(--good); } .delta-bad { color: var(--oxide); font-weight: 600; }
+  .note { font-size: 11px; color: var(--ink-soft); line-height: 1.5; }
+  .pill { display: inline-block; font-size: 10px; padding: 1px 6px; border: 1px solid var(--graphite); border-radius: 10px; color: var(--ink-soft); }
+  /* substructure table */
+  .subtbl input, .subtbl select { padding: 3px 5px; font-size: 12px; }
+  /* optional override fields (e.g. computed grades you can override) read as derived, not required */
+  .subtbl input.ovr { background: transparent; border: 1px dashed var(--graphite); color: var(--ink-soft); font-style: italic; }
+  .subtbl input.ovr:focus { color: var(--ink); border-color: var(--cyan); font-style: normal; background: rgba(255,255,255,.5); }
+  .subtbl input.ovr.edited { color: var(--oxide); border-style: solid; border-color: var(--oxide); font-style: normal; }
+  .subtbl td { padding: 2px 4px; }
+  .subtbl .utag { font-size: 9px; text-transform: uppercase; padding: 1px 6px; border-radius: 8px; color: var(--vellum); }
+  .utag.abut { background: var(--ink-soft); } .utag.pier { background: var(--cyan); }
+  .hovbox { position: fixed; pointer-events: none; background: var(--ink); color: var(--vellum); font-family: monospace;
+    font-size: 11px; padding: 4px 7px; border-radius: 3px; z-index: 50; display: none; white-space: pre; }
+  .legendbar { display:flex; align-items:center; gap:8px; font-size:10px; color:var(--ink-soft); font-family:monospace; }
+  .legendbar .grad { height:10px; width:160px; border:1px solid var(--graphite); }
+</style>
+</head>
+<body>
+<header>
+  <div class="htop">
+    <h1>Bridge Geometry Engine</h1>
+    <span class="sub">deck &amp; beam-seat elevations</span>
+    <span class="ver">v0.3 · spans · 3D · heatmap</span>
+  </div>
+  <div class="tabs" role="tablist">
+    <button class="tabbtn" role="tab" aria-selected="true"  data-tab="align">Alignment</button>
+    <button class="tabbtn" role="tab" aria-selected="false" data-tab="bridge">Bridge</button>
+    <button class="tabbtn" role="tab" aria-selected="false" data-tab="output">Top of Deck Output</button>
+    <button class="tabbtn" role="tab" aria-selected="false" data-tab="seat">Beam Seat Output</button>
+  </div>
+</header>
+
+<main>
+  <!-- TAB 1: ALIGNMENT -->
+  <section class="tabpane active" id="pane-align" role="tabpanel">
+    <p class="note" style="font-size:12px; margin-bottom:14px;">Define the roadway geometry the bridge follows: the <strong>horizontal alignment</strong> (the path in plan — tangents, curves, spirals) and the <strong>vertical profile</strong> (elevation along the route — grades and vertical curves). Everything else in the tool is positioned relative to this. Graphics at the bottom show the result.</p>
+    <h2 class="sec">Horizontal Alignment</h2>
+    <fieldset>
+      <legend>POB · point of beginning</legend>
+      <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px;">
+        <div><label>Start station</label><input type="text" id="h_sta0" value="0+00.00" placeholder="100+00.00" title="Station of the point of beginning, in NNN+NN.NN format (e.g. 100+00.00 = 10000 ft). All downstream stationing is measured from here."></div>
+        <div><label>Start bearing</label><input type="text" id="h_brg0" value="N90E" placeholder="N17°48'37&quot;E or 90" title="Direction the alignment heads at the start. Quadrant bearing (N17°48'37&quot;E) or azimuth in degrees clockwise from north (90 = due east)."></div>
+        <div><label>Northing (start)</label><input type="number" id="h_y0" value="0" step="0.001" title="Survey northing (Y coordinate) of the point of beginning, in feet."></div>
+        <div><label>Easting (start)</label><input type="number" id="h_x0" value="0" step="0.001" title="Survey easting (X coordinate) of the point of beginning, in feet."></div>
+      </div>
+      <p class="note">Station NNN+NN.NN. Bearing as quadrant DMS (N17°48'37"E) or azimuth degrees. Northing→Y, Easting→X. Positive R curves right.</p>
+    </fieldset>
+
+    <h2 class="sec">Horizontal Alignment Data</h2>
+    <fieldset>
+      <legend>elements · begin/end station &amp; bearing computed from POB</legend>
+      <div style="overflow-x:auto;"><table class="subtbl" id="elem_tbl"></table></div>
+      <button class="sm ghost" id="elem_add" style="margin-top:8px;">+ Element</button>
+      <div class="note" id="elem_warn" style="color:var(--oxide); margin-top:6px;"></div>
+    </fieldset>
+
+    <h2 class="sec">Vertical Profile</h2>
+    <fieldset>
+      <legend>PVIs · first row is Start point, last is End point; interior rows are PVIs with vertical curves</legend>
+      <div style="overflow-x:auto;"><table class="subtbl" id="vprof_tbl"></table></div>
+      <button class="sm ghost" id="vpvi_add" style="margin-top:8px;">+ PVI</button>
+      <div class="note" id="vprof_warn" style="color:var(--oxide); margin-top:6px;"></div>
+      <p class="note"><strong>Required inputs</strong> (solid boxes): station and elevation for each point, plus a vertical curve length for interior PVIs. <strong>Optional overrides</strong> (dashed, italic boxes): grade in/out are computed and shown, but you may type one to override it — editing grade-out holds that PVI and recomputes the next point's elevation; an overridden grade turns solid oxide. The Start and End rows are the profile endpoints (no curve). A.D., K, BVC/EVC and high/low point compute automatically; a vertical curve is centered on its PVI and spans BVC to EVC = its length.</p>
+    </fieldset>
+
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
+      <button id="run">Compute</button>
+      <button class="ghost" id="loadval">Load validation set</button>
+      <span style="display:inline-flex; align-items:center; gap:6px; margin-left:8px;">
+        <span class="note" style="text-transform:none;">Bridge:</span>
+        <span class="pill" id="cur_name">(unsaved)</span>
+      </span>
+      <button class="sm" id="proj_savelib" title="Save the current bridge to the library (updates the loaded entry, or prompts for a name).">Save</button>
+      <button class="sm ghost" id="proj_saveas" title="Save the current bridge under a new name.">Save As</button>
+      <button class="sm ghost" id="proj_new" title="Clear to a fresh demo bridge.">New / reset</button>
+      <span class="sep" style="display:inline-block;width:1px;height:18px;background:var(--graphite);margin:0 4px;"></span>
+      <button class="sm ghost" id="proj_save" title="Export the current bridge as a JSON file.">Export JSON</button>
+      <button class="sm ghost" id="proj_load" title="Import a bridge from a JSON file.">Import JSON</button>
+      <input type="file" id="proj_file" accept="application/json,.json" style="display:none">
+      <span class="note" id="save_status" style="margin-left:auto;">—</span>
+    </div>
+
+    <div style="margin-top:10px;">
+      <button class="sm ghost" id="lib_toggle" type="button">\u25b8 Bridge Library</button>
+      <div id="lib_panel" style="display:none; margin-top:8px;">
+        <fieldset>
+          <legend>saved bridges (stored in this browser)</legend>
+          <p class="note" style="margin-top:0;">Save multiple bridges and switch between them. These are stored locally in this browser only &mdash; use <strong>Export JSON</strong> to keep a portable copy or move a bridge to another machine. <strong>Save As</strong> adds a new entry; <strong>Save</strong> updates the one currently loaded.</p>
+          <div style="display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+            <button class="sm" id="lib_saveas">Save current as\u2026</button>
+            <button class="sm ghost" id="lib_refresh">Refresh list</button>
+          </div>
+          <div id="lib_list" style="overflow-x:auto;"></div>
+        </fieldset>
+      </div>
+    </div>
+
+    <h2 class="sec" style="margin-top:18px;">Graphics</h2>
+    <div class="svgcard">
+      <div class="cap"><span>Plan</span><span class="pill" id="plan_len">—</span>
+        <span class="note" style="text-transform:none;letter-spacing:0;">hover for sta / N,E / bearing · drag pan · scroll zoom</span>
+        <span class="gctrl" data-svg="svg_plan_a"><button data-zin>+</button><button data-zout>−</button><button data-reset>reset</button><span class="sep"></span><button data-svgexp>SVG</button></span>
+      </div>
+      <svg id="svg_plan_a" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="svgcard">
+      <div class="cap"><span>Profile</span><span class="note" style="text-transform:none;letter-spacing:0;">click to set station · hover for sta / elev / grade · drag pan</span>
+        <span class="gctrl" data-svg="svg_prof_a"><button data-zin>+</button><button data-zout>−</button><button data-reset>reset</button><span class="sep"></span><button data-svgexp>SVG</button></span>
+      </div>
+      <svg id="svg_prof_a" viewBox="0 0 1200 340" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="svgcard">
+      <div class="cap"><span>3D · alignment, deck &amp; substructure</span><span class="note" style="text-transform:none;letter-spacing:0;">drag orbit · scroll zoom</span>
+        <span class="gctrl" data-three="align"><button data-plan>plan</button><button data-elev>elev</button><button data-iso>iso</button><button data-fit>fit</button><span class="sep"></span><button data-pngexp>PNG</button></span>
+      </div>
+      <canvas id="three_align" class="view3d view3d-tall"></canvas>
+    </div>
+  </section>
+
+  <!-- TAB 2: BRIDGE -->
+  <section class="tabpane" id="pane-bridge" role="tabpanel">
+    <p class="note" style="font-size:12px; margin-bottom:14px;">Define the bridge itself on top of the alignment: how many <strong>spans</strong>, where the <strong>substructure</strong> (abutments and piers) sit, the <strong>deck cross-section</strong> (crown or superelevation, edges, curbs, girders), and the <strong>superstructure depths</strong> used to get from top-of-deck down to the beam seats. Hover any field label for an explanation.</p>
+    <div class="cols">
+      <div>
+        <h2 class="sec">Spans</h2>
+        <fieldset>
+          <legend>configuration</legend>
+          <div class="row2">
+            <div><label>Number of spans</label><input type="number" id="nspans" value="2" min="1" step="1" title="How many spans the bridge has. Generating creates 2 abutments + (N−1) piers."></div>
+            <div><label></label><button class="sm ghost" id="gen_spans" title="Create the substructure table for this span count, seeding support stations evenly along the alignment.">Generate table</button></div>
+          </div>
+          <p class="note">N spans → 2 abutments + (N−1) piers. Generating re-seeds stations evenly across the alignment; edit them to match your bridge.</p>
+        </fieldset>
+
+        <h2 class="sec">Cross Section</h2>
+        <fieldset>
+          <legend>global default</legend>
+          <div class="row2">
+            <div><label>Mode</label><select id="x_mode_global" title="Crown = deck falls both directions from the crown point (normal road section). Superelevation = deck is a single planar grade across the full width (banked through a curve)."><option value="crown">crown</option><option value="super">superelevation</option></select></div>
+            <div><label>Rate (decimal)</label><input type="number" id="x_rate_global" value="0.02" step="0.001" title="Cross slope as a decimal (0.02 = 2%). For crown, the fall on each side; for super, the planar grade across the deck."></div>
+          </div>
+          <div class="row2">
+            <div><label>Crown / pivot offset</label><input type="number" id="x_pivot" value="0" step="0.1" title="Transverse offset (ft from baseline) of the crown line (crown mode) or the pivot/axis-of-rotation (super mode). 0 = on the alignment baseline."></div>
+            <div></div>
+          </div>
+          <p class="note">Per-unit overrides set in the table below. Rate interpolates linearly between control points; crown = falls both sides, super = planar grade across.</p>
+        </fieldset>
+
+        <h2 class="sec">Girders &amp; Deck Edges</h2>
+        <fieldset>
+          <legend>global girder offsets (ft from baseline)</legend>
+          <div style="overflow-x:auto;"><table class="subtbl" id="girder_tbl"></table></div>
+          <button class="sm ghost" id="girder_add" style="margin:8px 0;">+ Girder</button>
+          <div class="row2">
+            <div><label>Deck edge LEFT (offset)</label><input type="number" id="edge_l" value="-24" step="0.1" title="Transverse offset (ft from baseline) of the left deck edge. Negative = left of the alignment."></div>
+            <div><label>Deck edge RIGHT (offset)</label><input type="number" id="edge_r" value="24" step="0.1" title="Transverse offset (ft from baseline) of the right deck edge. Positive = right of the alignment."></div>
+          </div>
+          <div class="row2">
+            <div><label>Curb LEFT (offset)</label><input type="number" id="curb_l" value="-21" step="0.1" placeholder="opt" title="Transverse offset (ft from baseline) of the left curb line. Used for curb elevations in the output. Can be overridden per support in the substructure table."></div>
+            <div><label>Curb RIGHT (offset)</label><input type="number" id="curb_r" value="21" step="0.1" placeholder="opt" title="Transverse offset (ft from baseline) of the right curb line. Used for curb elevations in the output. Can be overridden per support in the substructure table."></div>
+          </div>
+          <p class="note">Global defaults. Per-span deck-edge overrides and per-support curb offsets available in the substructure table. Curb offsets interpolate linearly between supports.</p>
+        </fieldset>
+
+        <h2 class="sec">Superstructure Depths</h2>
+        <fieldset>
+          <legend>top of deck → beam seat</legend>
+          <p class="note" style="margin-top:0">Beam seat = top-of-deck − deck thickness − (min haunch + camber) − beam depth − bearing assembly. Camber is the positive midspan ordinate; it lowers the seat.</p>
+          <div class="row2">
+            <div><label>Deck structural thickness</label><input type="number" id="d_slab" value="0.667" step="0.001" title="Minimum structural thickness of the deck slab (ft), constant across the section. Subtracted from top-of-deck to reach the bottom of the deck."></div>
+            <div><label>Minimum haunch</label><input type="number" id="d_haunch" value="0.125" step="0.001" title="Minimum haunch (ft) between bottom of deck and top of beam, occurring at the point of maximum camber. At the bearings the haunch becomes minimum haunch + camber."></div>
+          </div>
+          <div class="row3">
+            <div><label>Beam depth (default)</label><input type="number" id="d_beam" value="3.0" step="0.01" title="Overall beam/girder depth (ft), top of beam to bottom of beam. Default; can be overridden per beam and per span below."></div>
+            <div><label>Bearing assy (default)</label><input type="number" id="d_bearing" value="0.25" step="0.001" title="Bearing assembly thickness (ft) from bottom of beam to top of substructure concrete (the beam seat). Default; can be overridden per beam and per span below."></div>
+            <div><label>Camber (default)</label><input type="number" id="d_camber" value="0" step="0.001" title="Midspan camber ordinate (ft), entered positive (beam bows up at midspan). Lowers the beam seat by this amount at the bearings. Default; can be overridden per beam and per span below."></div>
+          </div>
+          <div style="margin-top:10px">
+            <button class="sm ghost" id="ovr_toggle" type="button">▸ Per-beam / per-span overrides</button>
+            <span class="note" style="margin-left:8px;">(opens full-width grid below)</span>
+          </div>
+        </fieldset>
+        <button id="run2">Compute</button>
+      </div>
+      <div>
+        <h2 class="sec">Substructure Units</h2>
+        <div style="overflow-x:auto;"><table class="subtbl" id="subtbl"></table></div>
+        <p class="note">Skew measured from alignment normal (0° = perpendicular). Dual bearing offset = distance back/ahead of unit station.</p>
+
+        <h2 class="sec">Per-span girder &amp; deck-edge overrides</h2>
+        <p class="note" style="margin-top:-6px;">Most bridges use the same girders and deck width everywhere &mdash; if so, you can ignore this table entirely; every span uses the global values above. Use it only when a particular span differs (e.g. a span has a different number of girders, a flared deck, or a different edge offset). Each greyed cell shows the global value it would inherit; type a value to override just that span (it turns solid), or clear it to revert.</p>
+        <div style="overflow-x:auto;"><table class="subtbl" id="spantbl"></table></div>
+
+        <h2 class="sec">3D Bridge View</h2>
+        <p class="note" style="margin-top:-6px;">Three-dimensional view of the bridge: deck surface, girders, beam-seat lines, and substructure. Toggle layers and adjust the vertical exaggeration to inspect the geometry. Drag to orbit, scroll to zoom; use plan/elev/iso for standard views.</p>
+        <div style="display:flex; flex-wrap:wrap; gap:10px 16px; margin-bottom:8px; font-size:11px; color:var(--ink-soft); align-items:center;">
+          <label style="display:inline-flex; gap:5px; align-items:center; margin:0;"><input type="checkbox" id="l3_deck" checked style="width:auto"> deck surface</label>
+          <label style="display:inline-flex; gap:5px; align-items:center; margin:0;"><input type="checkbox" id="l3_cl" checked style="width:auto"> centerline</label>
+          <label style="display:inline-flex; gap:5px; align-items:center; margin:0;"><input type="checkbox" id="l3_gird" checked style="width:auto"> girders</label>
+          <label style="display:inline-flex; gap:5px; align-items:center; margin:0;"><input type="checkbox" id="l3_seat" checked style="width:auto"> beam-seat lines</label>
+          <label style="display:inline-flex; gap:5px; align-items:center; margin:0;"><input type="checkbox" id="l3_pier" checked style="width:auto"> piers / abutments</label>
+          <label style="display:inline-flex; gap:5px; align-items:center; margin:0;"><input type="checkbox" id="l3_lbl" checked style="width:auto"> labels</label>
+          <label style="display:inline-flex; gap:5px; align-items:center; margin:0;"><input type="checkbox" id="l3_ground" style="width:auto"> ground plane</label>
+          <span style="display:inline-flex; gap:6px; align-items:center; margin-left:auto;">vert. exag.
+            <input type="range" id="l3_exag" min="0" max="100" step="1" value="50" style="width:120px;" title="Vertical exaggeration. Bridges are long and shallow, so elevations are scaled up to make the deck shape and grades visible. Midpoint = 1 (true scale); left compresses, right exaggerates.">
+            <span id="l3_exag_val" style="font-family:monospace;">1.0\u00d7</span></span>
+        </div>
+        <div class="svgcard">
+          <div class="cap"><span>3D</span><span class="note" style="text-transform:none;letter-spacing:0;">deck, girders, beam seats &amp; substructure</span>
+            <span class="gctrl" data-three="sub"><button data-plan>plan</button><button data-elev>elev</button><button data-iso>iso</button><button data-fit>fit</button><span class="sep"></span><button data-pngexp>PNG</button></span>
+          </div>
+          <canvas id="three_sub" class="view3d"></canvas>
+        </div>
+        <h2 class="sec">Span summary</h2>
+        <div id="span_wrap"></div>
+      </div>
+    </div>
+    <div id="ovr_panel" style="display:none; margin-top:4px;">
+      <h2 class="sec">Per-beam / per-span overrides</h2>
+      <fieldset>
+        <legend>camber · beam depth · bearing assembly</legend>
+        <div style="margin-bottom:6px;">
+          <label style="display:inline-block; font-size:11px; color:var(--ink-soft); margin-right:6px;">Quantity</label>
+          <select id="ovr_which" style="width:160px">
+            <option value="camber">Camber</option>
+            <option value="beam">Beam depth</option>
+            <option value="bearing">Bearing assembly</option>
+          </select>
+        </div>
+        <div style="overflow-x:auto;"><table class="subtbl" id="ovr_grid"></table></div>
+        <p class="note">Grey italic = inherited default (per-beam, then global). Type a value to override; it turns solid. Blank a cell to revert to the default. Rows are beams, columns are spans.</p>
+      </fieldset>
+    </div>
+  </section>
+
+  <!-- TAB 3: OUTPUT -->
+  <section class="tabpane" id="pane-output" role="tabpanel">
+    <p class="note" style="font-size:12px; margin-bottom:14px;">Top-of-deck (riding surface) results: a color <strong>heatmap</strong> of deck elevation in plan, a <strong>cross-section</strong> at a chosen station, and a <strong>table</strong> of elevations at each cross-section location. Use the <strong>validation</strong> panel to check the model against known points. Beam-seat results are on the next tab.</p>
+    <h2 class="sec">Deck elevation heatmap</h2>
+    <div style="display:grid; grid-template-columns:auto 1fr; gap:14px; align-items:end; margin-bottom:8px;">
+      <div><label>Divisions per span</label><input type="number" id="divs" value="10" min="2" step="1" style="width:90px" title="Number of equal sampling intervals per span used to build the deck-elevation heatmap. Higher = finer/smoother color grid."></div>
+      <div class="legendbar"><span id="leg_lo">—</span><div class="grad" id="leg_grad"></div><span id="leg_hi">—</span><span>ft</span></div>
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:12px 18px; margin-bottom:10px; font-size:11px; color:var(--ink-soft);">
+      <label style="display:inline-flex; gap:5px; align-items:center; margin:0;"><input type="checkbox" id="ly_fill" checked style="width:auto"> elevation fill</label>
+      <label style="display:inline-flex; gap:5px; align-items:center; margin:0;"><input type="checkbox" id="ly_align" checked style="width:auto"> alignment</label>
+      <label style="display:inline-flex; gap:5px; align-items:center; margin:0;"><input type="checkbox" id="ly_gird" checked style="width:auto"> girders</label>
+      <label style="display:inline-flex; gap:5px; align-items:center; margin:0;"><input type="checkbox" id="ly_edge" checked style="width:auto"> deck edges</label>
+      <label style="display:inline-flex; gap:5px; align-items:center; margin:0;"><input type="checkbox" id="ly_sub" checked style="width:auto"> pier/abut CL</label>
+      <label style="display:inline-flex; gap:5px; align-items:center; margin:0;"><input type="checkbox" id="ly_brg" checked style="width:auto"> bearing CL</label>
+      <label style="display:inline-flex; gap:5px; align-items:center; margin:0;"><input type="checkbox" id="ly_sta" checked style="width:auto"> station callouts</label>
+      <label style="display:inline-flex; gap:5px; align-items:center; margin:0;"><input type="checkbox" id="ly_gpt" style="width:auto"> girder pt callouts</label>
+      <label style="display:inline-flex; gap:5px; align-items:center; margin:0;"><input type="checkbox" id="ly_elev" checked style="width:auto"> elevation nodes</label>
+    </div>
+    <div class="svgcard">
+      <div class="cap"><span>Deck plan · top-of-deck elevation</span><span class="note" style="text-transform:none;letter-spacing:0;">hover elev · shift-drag pan · scroll zoom</span>
+        <span class="gctrl" data-heat><button data-zin>+</button><button data-zout>−</button><button data-reset>reset</button><span class="sep"></span><button data-pngexp>PNG</button></span>
+      </div>
+      <canvas id="heat" width="1000" height="560" style="cursor:crosshair;"></canvas>
+    </div>
+
+    <h2 class="sec">Cross-section at station</h2>
+    <p class="note" style="margin-top:-6px;">Transverse cut through the deck at the chosen station, looking up-station. Shows the top-of-deck surface, deck slab, each girder with its full stack down to the beam seat, deck edges, curbs, cross-slope, and key elevations. Set the station with the slider or by typing it.</p>
+    <div style="display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; margin-bottom:8px;">
+      <div><label style="font-size:11px;">Station</label><input type="text" id="sec_sta_in" value="" placeholder="100+00.00" style="width:110px" title="Station of the cross-section (NNN+NN.NN). Type a station or drag the slider."></div>
+      <input type="range" id="sec_sta_slider" min="0" max="1000" step="0.1" value="0" style="width:100%;" title="Drag to move the cross-section along the bridge.">
+      <div style="display:flex; gap:4px; flex-wrap:wrap;" id="sec_snap"></div>
+    </div>
+    <div class="svgcard">
+      <div class="cap"><span>Section</span><span class="pill" id="sec_sta">@ sta —</span>
+        <span class="gctrl" data-svg="svg_sec"><button data-zin>+</button><button data-zout>−</button><button data-reset>reset</button><span class="sep"></span><button data-svgexp>SVG</button></span>
+      </div>
+      <svg id="svg_sec" viewBox="0 0 960 320" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+
+    <h2 class="sec">Top-of-deck table</h2>
+    <p class="note" style="margin-top:-6px;">Top-of-deck (riding surface) elevations. Choose how station rows are generated, then read the elevation at each cross-section location.</p>
+    <div style="display:grid; grid-template-columns:auto auto 1fr; gap:10px; align-items:end; margin-bottom:10px;">
+      <div><label>Report mode</label>
+        <select id="rep_mode" title="Span divisions = elevations at evenly-spaced stations along each span (plus support and bearing lines). At bearing lines = elevations only at the support/bearing stations.">
+          <option value="grid">span divisions (girders + edges)</option>
+          <option value="bearings">at bearing lines</option>
+        </select></div>
+      <div><label>Divisions</label><input type="number" id="rep_div" value="10" min="2" step="1" style="width:90px" title="Number of equal intervals per span for the elevation table (span-divisions mode). Support centerlines and bearing lines are always added as extra rows."></div>
+      <div></div>
+    </div>
+    <div id="tbl_wrap" style="overflow-x:auto;"></div>
+
+    <h2 class="sec" style="margin-top:26px;">Validation · known points</h2>
+    <p class="note" style="margin-top:-6px;">Spot-check the model against points whose elevation you already know (e.g. from a plan or independent calc). Enter each point's station, transverse offset from baseline, and expected top-of-deck elevation in its own box. Each is compared to the computed elevation and flagged if it differs by more than the tolerance.</p>
+    <div style="overflow-x:auto;"><table class="subtbl" id="val_tbl"></table></div>
+    <div style="display:flex; gap:10px; align-items:end; margin-top:8px; flex-wrap:wrap;">
+      <button class="sm ghost" id="val_add" title="Add a known point row.">+ Point</button>
+      <div><label style="font-size:11px;">Tolerance (ft)</label><input type="number" id="val_tol" value="0.005" step="0.001" style="width:90px" title="Maximum allowed difference (ft) between computed and expected elevation before a point is flagged as failing."></div>
+      <button class="ghost" id="val_run" title="Compare computed elevations against the entered known points.">Check</button>
+    </div>
+    <div id="val_wrap" style="margin-top:10px;"></div>
+  </section>
+
+  <!-- TAB: BEAM SEAT OUTPUT -->
+  <section class="tabpane" id="pane-seat" role="tabpanel">
+    <h2 class="sec">Beam Seat Elevations · at bearing lines</h2>
+    <p class="note" style="margin-top:-6px;">Seat = top-of-deck − deck thickness − (min haunch + camber) − beam depth − bearing assembly. One row per bearing line; dual-bearing piers report back &amp; ahead separately, each using its own span's camber/depth/bearing.</p>
+    <div id="seat_tbl_wrap" style="overflow-x:auto;"></div>
+
+    <h2 class="sec" style="margin-top:24px;">Cross-sections at each bearing line</h2>
+    <p class="note" style="margin-top:-6px;">Looking up-station. Stepped substructure (top follows each girder seat), beam centerlines, deck edges, curb lines, and the top-of-deck profile, with seat elevation callouts.</p>
+    <div id="seat_secs"></div>
+  </section>
+</main>
+<div class="hovbox" id="hovbox"></div>
+
+<script>
+const DEG = Math.PI/180;
+
+/* ===== SURVEY INPUT PARSERS / FORMATTERS ===== */
+function parseStation(str){
+  if(typeof str==='number') return str;
+  const s=String(str).trim(); if(s==='') return NaN;
+  if(s.indexOf('+')<0){ const v=parseFloat(s); return isNaN(v)?NaN:v; }
+  const parts=s.split('+'); if(parts.length!==2) return NaN;
+  const L=parseFloat(parts[0]||'0'), R=parseFloat(parts[1]||'0');
+  if(isNaN(L)||isNaN(R)) return NaN; return L*100+R;
+}
+function formatStation(val, dec){
+  if(typeof val!=='number'||isNaN(val)) return '';
+  const d=(dec==null?2:dec), neg=val<0, v=Math.abs(val), h=Math.floor(v/100), rem=v-h*100;
+  return (neg?'-':'')+h+'+'+rem.toFixed(d).padStart(3+d,'0');
+}
+// DMS or decimal -> decimal degrees
+function parseAngle(str){
+  if(typeof str==='number') return str;
+  let s=String(str).trim(); if(s==='') return NaN;
+  if(/^[-+]?\d+(\.\d+)?$/.test(s)) return parseFloat(s);
+  const nums=s.match(/\d+(\.\d+)?/g); if(!nums) return NaN;
+  const sign=/^-/.test(s)?-1:1;
+  const d=parseFloat(nums[0]||'0'), m=parseFloat(nums[1]||'0'), sec=parseFloat(nums[2]||'0');
+  return sign*(d+m/60+sec/3600);
+}
+// quadrant bearing (N17°48'37"E) or azimuth -> azimuth degrees cw from North
+function parseBearingToAzimuth(str){
+  if(typeof str==='number') return ((str%360)+360)%360;
+  let s=String(str).trim().toUpperCase(); if(s==='') return NaN;
+  const q=s.match(/^([NS])(.*)([EW])$/);
+  if(q){ const ns=q[1], we=q[3], ang=parseAngle(q[2].trim()); if(isNaN(ang)) return NaN;
+    if(ns==='N'&&we==='E') return ((ang%360)+360)%360;
+    if(ns==='N'&&we==='W') return ((360-ang)%360+360)%360;
+    if(ns==='S'&&we==='E') return 180-ang;
+    if(ns==='S'&&we==='W') return 180+ang; }
+  const az=parseAngle(s); return isNaN(az)?NaN:(((az%360)+360)%360);
+}
+function formatDMS(dec){
+  if(typeof dec!=='number'||isNaN(dec)) return '';
+  const sign=dec<0?-1:1; let v=Math.abs(dec); let d=Math.floor(v); let mf=(v-d)*60; let m=Math.floor(mf); let s=Math.round((mf-m)*60);
+  if(s===60){s=0;m++;} if(m===60){m=0;d++;}
+  return (sign<0?'-':'')+d+'°'+String(m).padStart(2,'0')+"'"+String(s).padStart(2,'0')+'"';
+}
+function azimuthToQuadrant(az){
+  az=(((az%360)+360)%360);
+  if(az<=90) return 'N'+formatDMS(az)+'E';
+  if(az<=180) return 'S'+formatDMS(180-az)+'E';
+  if(az<=270) return 'S'+formatDMS(az-180)+'W';
+  return 'N'+formatDMS(360-az)+'W';
+}
+
+/* ===== ALIGNMENT (verified) ===== */
+function buildAlignment(pob, elemText){
+  const lines=elemText.trim().split(/\n+/).map(s=>s.trim()).filter(Boolean);
+  let sta=pob.sta,x=pob.x,y=pob.y,brg=pob.brg*DEG; const elems=[];
+  for(const ln of lines){ const p=ln.split(',').map(s=>s.trim()); const type=p[0].toLowerCase();
+    if(type==='tan') elems.push(makeTangent(sta,x,y,brg,+p[1]));
+    else if(type==='crv') elems.push(makeCurve(sta,x,y,brg,+p[1],+p[2]));
+    else if(type==='spi') elems.push(makeSpiral(sta,x,y,brg,+p[1],+p[2],+p[3]));
+    else continue;
+    const e=elems[elems.length-1]; const end=e.at(e.staEnd); sta=e.staEnd; x=end.x; y=end.y; brg=end.brg; }
+  return { staStart:pob.sta, staEnd:sta,
+    at(s){ let el=elems.find(e=>s>=e.staStart-1e-9&&s<=e.staEnd+1e-9);
+      if(!el) el=(s<elems[0].staStart)?elems[0]:elems[elems.length-1]; return el.at(s); }, elems };
+}
+function makeTangent(sta0,x0,y0,brg0,L){ return { staStart:sta0, staEnd:sta0+L,
+  at(s){ const d=s-sta0; return { x:x0+Math.sin(brg0)*d, y:y0+Math.cos(brg0)*d, brg:brg0 }; } }; }
+function makeCurve(sta0,x0,y0,brg0,R,L){ const sgn=Math.sign(R)||1, r=Math.abs(R), k=sgn/r;
+  return { staStart:sta0, staEnd:sta0+L, at(s){ const d=s-sta0, b=brg0+k*d;
+    return { x:x0+(Math.cos(brg0)-Math.cos(b))/k, y:y0+(Math.sin(b)-Math.sin(brg0))/k, brg:b }; } }; }
+function makeSpiral(sta0,x0,y0,brg0,Rin,Rout,L){ const kin=Rin===0?0:1/Rin, kout=Rout===0?0:1/Rout;
+  function heading(d){ return brg0+kin*d+(kout-kin)*d*d/(2*L); }
+  const N=200; const xs=new Float64Array(N+1), ys=new Float64Array(N+1); xs[0]=x0; ys[0]=y0; const h=L/N;
+  for(let i=1;i<=N;i++){ const d0=(i-1)*h,d1=i*h,dm=(d0+d1)/2,b0=heading(d0),bm=heading(dm),b1=heading(d1);
+    xs[i]=xs[i-1]+(h/6)*(Math.sin(b0)+4*Math.sin(bm)+Math.sin(b1));
+    ys[i]=ys[i-1]+(h/6)*(Math.cos(b0)+4*Math.cos(bm)+Math.cos(b1)); }
+  return { staStart:sta0, staEnd:sta0+L, at(s){ const d=Math.max(0,Math.min(L,s-sta0)), t=d/h, i=Math.floor(t), f=t-i;
+    return { x:(i>=N)?xs[N]:xs[i]+(xs[i+1]-xs[i])*f, y:(i>=N)?ys[N]:ys[i]+(ys[i+1]-ys[i])*f, brg:heading(d) }; } }; }
+
+/* ===== PROFILE ===== */
+function buildProfile(pviText){
+  const pvis=pviText.trim().split(/\n+/).map(s=>s.trim()).filter(Boolean).map(ln=>{
+    const p=ln.split(',').map(t=>+t.trim()); return {sta:p[0],elev:p[1],L:isNaN(p[2])?0:p[2]}; });
+  for(let i=0;i<pvis.length-1;i++) pvis[i].gradeOut=(pvis[i+1].elev-pvis[i].elev)/(pvis[i+1].sta-pvis[i].sta);
+  for(let i=1;i<pvis.length;i++) pvis[i].gradeIn=pvis[i-1].gradeOut;
+  return { elevAt(s){
+    if(s<=pvis[0].sta) return pvis[0].elev+(pvis[0].gradeOut||0)*(s-pvis[0].sta);
+    const last=pvis[pvis.length-1]; if(s>=last.sta) return last.elev+(last.gradeIn||0)*(s-last.sta);
+    for(let i=1;i<pvis.length-1;i++){ const v=pvis[i]; if(v.L>0){ const bvc=v.sta-v.L/2,evc=v.sta+v.L/2;
+      if(s>=bvc&&s<=evc){ const g1=v.gradeIn,g2=v.gradeOut,elevBVC=v.elev-g1*(v.L/2),xx=s-bvc;
+        return elevBVC+g1*xx+(g2-g1)*xx*xx/(2*v.L); } } }
+    for(let i=0;i<pvis.length-1;i++){ if(s>=pvis[i].sta&&s<=pvis[i+1].sta) return pvis[i].elev+pvis[i].gradeOut*(s-pvis[i].sta); }
+    return last.elev; }, pvis };
+}
+
+/* ===== CROSS SECTION (crown/super, per-unit override, linear rate interp) ===== */
+function buildCrossSection(globalMode, globalRate, controls, pivot){
+  const cps = controls.slice().sort((a,b)=>a.sta-b.sta);
+  function rateAt(s){
+    if(cps.length===0) return {mode:globalMode, rate:globalRate};
+    if(s<=cps[0].sta) return {mode:cps[0].mode, rate:cps[0].rate};
+    if(s>=cps[cps.length-1].sta) return {mode:cps[cps.length-1].mode, rate:cps[cps.length-1].rate};
+    for(let i=0;i<cps.length-1;i++){ if(s>=cps[i].sta&&s<=cps[i+1].sta){
+      const f=(s-cps[i].sta)/(cps[i+1].sta-cps[i].sta);
+      return { mode: f<0.5?cps[i].mode:cps[i+1].mode, rate: cps[i].rate+(cps[i+1].rate-cps[i].rate)*f }; } }
+    return {mode:globalMode, rate:globalRate};
+  }
+  function dz(s, off){ const {mode,rate}=rateAt(s);
+    return (mode==='crown') ? -Math.abs(rate)*Math.abs(off-pivot) : rate*(off-pivot); }
+  return { rateAt, dz, controls:cps };
+}
+
+/* ===== ALIGNMENT / PROFILE / GIRDER INPUT STATE ===== */
+// element rows: {type:'tan'|'crv'|'spi', L, R, Rin, Rout}
+let ELEMS = [
+  {type:'tan', L:200, R:800, Rin:0, Rout:800, curveMode:'L', deltaStr:''},
+  {type:'spi', L:150, R:800, Rin:0, Rout:800, curveMode:'L', deltaStr:''},
+  {type:'crv', L:300, R:800, Rin:0, Rout:800, curveMode:'L', deltaStr:''},
+  {type:'spi', L:150, R:800, Rin:800, Rout:0, curveMode:'L', deltaStr:''},
+  {type:'tan', L:200, R:800, Rin:0, Rout:800, curveMode:'L', deltaStr:''}
+];
+// pvi rows: {sta, elev, L(0=none)} — the engine's representation, mirrors VPIS directly
+let PVIS = [ {sta:0,elev:100.00,L:0}, {sta:400,elev:108.00,L:300}, {sta:900,elev:104.00,L:0} ];
+// Vertical profile points (primary input). First row = Start point, last = End point (L forced 0).
+// Interior rows are PVIs with a vertical curve length. Each: {sta, elev, L}.
+let VPIS = [ {sta:0,elev:100.00,L:0}, {sta:400,elev:108.00,L:300}, {sta:900,elev:104.00,L:0} ];
+
+// PVIS is just VPIS with endpoint curve lengths zeroed.
+function syncProfile(){
+  PVIS = VPIS.map((p,i)=>({ sta:p.sta, elev:p.elev, L:(i===0||i===VPIS.length-1)?0:(p.L||0) }));
+}
+// grade helpers on VPIS
+function vGradeOut(i){ return i<VPIS.length-1 ? (VPIS[i+1].elev-VPIS[i].elev)/(VPIS[i+1].sta-VPIS[i].sta) : null; }
+function vGradeIn(i){ return i>0 ? (VPIS[i].elev-VPIS[i-1].elev)/(VPIS[i].sta-VPIS[i-1].sta) : null; }
+// editing grade-out holds point i, moves point i+1's elevation; grade-in holds i, moves i-1
+function vSetGradeOut(i,gPct){ if(i>=VPIS.length-1)return; VPIS[i+1].elev = VPIS[i].elev + (gPct/100)*(VPIS[i+1].sta-VPIS[i].sta); }
+function vSetGradeIn(i,gPct){ if(i<=0)return; VPIS[i-1].elev = VPIS[i].elev - (gPct/100)*(VPIS[i].sta-VPIS[i-1].sta); }
+// girder offsets: array of numbers
+let GIRDERS = [-18,-6,6,18];
+
+// Per-beam-per-span overrides for camber, beam depth, bearing assembly.
+// PERBEAM[q][beamIdx] = value ; PERBEAMSPAN[q]["beamIdx,span"] = value. q in {camber,beam,bearing}.
+// Resolution: per-beam-per-span -> per-beam -> global default field.
+let PERBEAM    = { camber:{}, beam:{}, bearing:{} };
+let PERBEAMSPAN= { camber:{}, beam:{}, bearing:{} };
+function depthGlobal(q){
+  const id = q==='camber'?'d_camber':(q==='beam'?'d_beam':'d_bearing');
+  const el=document.getElementById(id); return el?+el.value:0;
+}
+// resolve a per-beam quantity for beam index bi (0-based into the span's girder set) in a given span
+function resolveDepth(q, bi, span){
+  const ks=bi+','+span;
+  const pbs=PERBEAMSPAN[q]||{}; if(pbs[ks]!=null && pbs[ks]!=='') return +pbs[ks];
+  const pb=PERBEAM[q]||{};      if(pb[bi]!=null && pb[bi]!=='')   return +pb[bi];
+  return depthGlobal(q);
+}
+
+// effective curve length: from L directly, or from R*delta when curveMode='delta'
+function curveLength(e){
+  if(e.curveMode==='delta' && e.deltaStr){ const dd=parseAngle(e.deltaStr);
+    if(!isNaN(dd)) return Math.abs(e.R)*dd*DEG; }
+  return e.L;
+}
+function elemsToText(){
+  return ELEMS.map(e=>{
+    if(e.type==='tan') return `tan,${e.L}`;
+    if(e.type==='crv') return `crv,${e.R},${curveLength(e)}`;
+    return `spi,${e.Rin},${e.Rout},${e.L}`;
+  }).join('\n');
+}
+function pvisToText(){
+  return PVIS.map(p=> (p.L && p.L>0) ? `${p.sta},${p.elev},${p.L}` : `${p.sta},${p.elev}`).join('\n');
+}
+function girdersText(){ return GIRDERS.join(', '); }
+
+/* ===== SUBSTRUCTURE STATE ===== */
+// each unit: {type, name, sta, skew, bearMode, bearOffset, xMode(''|'crown'|'super'), xRate(null|num)}
+let UNITS = [];
+// per-span overrides: index by span number -> {girders:[]|null, edgeL:null|num, edgeR:null|num}
+let SPAN_OV = {};
+
+function seedSpans(n){
+  UNITS = [];
+  const nUnits = n + 1;
+  for(let i=0;i<nUnits;i++){
+    const isAbut = (i===0 || i===nUnits-1);
+    UNITS.push({ type:isAbut?'abut':'pier', name:isAbut?(i===0?'Abut 1':'Abut 2'):('Pier '+i),
+      sta:0, skew:0, bearMode:isAbut?'single':'double', bearOffset:isAbut?0:2.5,
+      xMode:'', xRate:null, curbL:null, curbR:null });
+  }
+  // seed stations evenly across current alignment if available
+  if(ENG){ const s0=ENG.align.staStart,s1=ENG.align.staEnd;
+    UNITS.forEach((u,i)=>u.sta=+(s0+(s1-s0)*i/(nUnits-1)).toFixed(2)); }
+  SPAN_OV = {};
+}
+
+function sortedUnits(){ return UNITS.slice().sort((a,b)=>a.sta-b.sta); }
+
+function crossControls(){
+  // build control points from global + per-unit overrides
+  const gMode=document.getElementById('x_mode_global').value;
+  const gRate=+document.getElementById('x_rate_global').value;
+  const ctrls=[]; sortedUnits().forEach(u=>{
+    if(u.xMode){ ctrls.push({sta:u.sta, mode:u.xMode, rate:(u.xRate==null?gRate:u.xRate)}); }
+  });
+  // if no overrides, leave empty (engine uses global). If some, anchor ends with global.
+  if(ctrls.length){
+    const su=sortedUnits();
+    if(ctrls[0].sta>su[0].sta) ctrls.unshift({sta:su[0].sta, mode:gMode, rate:gRate});
+    if(ctrls[ctrls.length-1].sta<su[su.length-1].sta) ctrls.push({sta:su[su.length-1].sta, mode:gMode, rate:gRate});
+  }
+  return {gMode,gRate,ctrls};
+}
+
+function girdersForSpan(span){
+  const ov=SPAN_OV[span];
+  if(ov && ov.girders) return ov.girders;
+  return GIRDERS.slice();
+}
+function edgesForSpan(span){
+  const ov=SPAN_OV[span]||{};
+  const gl=ov.edgeL!=null?ov.edgeL:+document.getElementById('edge_l').value;
+  const gr=ov.edgeR!=null?ov.edgeR:+document.getElementById('edge_r').value;
+  return {l:gl, r:gr};
+}
+// Curb offset at a station, interpolated linearly between supports that have a curb value set.
+// side: 'L' or 'R'. Falls back to global curb field, then to deck edge, if unset.
+function curbAt(sta, side){
+  const key = side==='L'?'curbL':'curbR';
+  const su = sortedUnits();
+  // collect supports that define this curb
+  const pts = su.filter(u=>u[key]!=null && u[key]!=='').map(u=>({sta:u.sta, v:+u[key]}));
+  if(pts.length===0){
+    const gid = side==='L'?'curb_l':'curb_r';
+    const gEl=document.getElementById(gid);
+    if(gEl && gEl.value!=='') return +gEl.value;
+    // fall back to deck edge
+    const span=Math.max(1,Math.min(su.length-1,spanOfSta(sta)));
+    return side==='L'?edgesForSpan(span).l:edgesForSpan(span).r;
+  }
+  if(pts.length===1) return pts[0].v;
+  if(sta<=pts[0].sta) return pts[0].v;
+  if(sta>=pts[pts.length-1].sta) return pts[pts.length-1].v;
+  for(let i=0;i<pts.length-1;i++){ if(sta>=pts[i].sta && sta<=pts[i+1].sta){
+    const t=(sta-pts[i].sta)/(pts[i+1].sta-pts[i].sta); return pts[i].v+(pts[i+1].v-pts[i].v)*t; } }
+  return pts[0].v;
+}
+function spanOfSta(s){
+  const su=sortedUnits();
+  for(let i=0;i<su.length-1;i++){ if(s>=su[i].sta-1e-6 && s<=su[i+1].sta+1e-6) return i+1; }
+  return su.length-1;
+}
+
+/* ===== ENGINE ===== */
+let ENG=null, ACTIVE_STA=null;
+function readCfg(){ const g=id=>document.getElementById(id).value; return {
+  h_sta0:g('h_sta0'),h_x0:g('h_x0'),h_y0:g('h_y0'),h_brg0:g('h_brg0'),h_elems:elemsToText(),
+  v_pvis:pvisToText(),x_pivot:g('x_pivot'),d_slab:g('d_slab'),d_haunch:g('d_haunch'),d_beam:g('d_beam'),
+  d_bearing:g('d_bearing'),d_camber:g('d_camber') }; }
+
+function buildEngine(){
+  syncProfile();   // regenerate PVIs from the single vertical-profile table
+  const cfg=readCfg();
+  const pobSta=parseStation(cfg.h_sta0); const pobBrg=parseBearingToAzimuth(cfg.h_brg0);
+  const align=buildAlignment({sta:isNaN(pobSta)?0:pobSta, x:+cfg.h_x0, y:+cfg.h_y0,
+    brg:isNaN(pobBrg)?90:pobBrg}, cfg.h_elems);
+  const prof=buildProfile(cfg.v_pvis);
+  const {gMode,gRate,ctrls}=crossControls();
+  const xsec=buildCrossSection(gMode,gRate,ctrls,+cfg.x_pivot);
+  const depths={slab:+cfg.d_slab, minHaunch:+cfg.d_haunch, beam:+cfg.d_beam,
+                bearing:+(cfg.d_bearing||0), camber:+(cfg.d_camber||0)};
+  function getDeckPoint(sta,offset){
+    const a=align.at(sta); const nrm=a.brg+Math.PI/2;
+    const x=a.x+Math.sin(nrm)*offset, y=a.y+Math.cos(nrm)*offset;
+    const zb=prof.elevAt(sta); const dz=xsec.dz(sta,offset);
+    return { x, y, z:zb+dz, bearing:a.brg }; }
+  // Beam seat = top-of-deck − deck thickness − (min haunch + camber) − beam depth − bearing assembly.
+  // ctx (optional) = {bi, span} selects per-beam-per-span camber/beam-depth/bearing; absent → globals.
+  function getBeamSeat(sta,offset,ctx){
+    const d=getDeckPoint(sta,offset);
+    let camber, beamDepth, bearing;
+    if(ctx && ctx.bi!=null && ctx.span!=null){
+      camber=resolveDepth('camber',ctx.bi,ctx.span);
+      beamDepth=resolveDepth('beam',ctx.bi,ctx.span);
+      bearing=resolveDepth('bearing',ctx.bi,ctx.span);
+    } else { camber=depths.camber; beamDepth=depths.beam; bearing=depths.bearing; }
+    const drop = depths.slab + (depths.minHaunch + camber) + beamDepth + bearing;
+    return { ...d, z:d.z-drop }; }
+  return { align, prof, xsec, depths, getDeckPoint, getBeamSeat,
+    globalGirders: GIRDERS.slice() };
+}
+
+function bearingLinesFor(u){
+  if(u.type==='pier' && u.bearMode==='double')
+    return [ {label:`${u.name} brg-back`, sta:u.sta-u.bearOffset, skew:u.skew},
+             {label:`${u.name} brg-ahead`, sta:u.sta+u.bearOffset, skew:u.skew} ];
+  return [ {label:`${u.name} brg`, sta:u.sta, skew:u.skew} ];
+}
+function staOnBearing(refSta, skewDeg, offset){ return refSta + offset*Math.tan(skewDeg*DEG); }
+
+/* ===== MAIN COMPUTE ===== */
+function compute(){
+  ENG=buildEngine();
+  if(ACTIVE_STA===null||ACTIVE_STA<ENG.align.staStart||ACTIVE_STA>ENG.align.staEnd)
+    ACTIVE_STA=(ENG.align.staStart+ENG.align.staEnd)/2;
+  drawPlan('svg_plan_a'); drawProfile('svg_prof_a');
+  buildSpanSummary(); drawSection(); buildTable(); drawHeatmap(); buildSeatTable(); buildSeatSections(); syncSectionControls(); renderSnapButtons();
+  render3DAlign(); render3DSub();
+  document.getElementById('plan_len').textContent='L = '+(ENG.align.staEnd-ENG.align.staStart).toFixed(1)+' ft';
+}
+
+/* ===== SVG VIEWPORT (pan/zoom) =====
+   Each SVG gets a {Z,Px,Py} user transform composed on top of its own fit math.
+   Drawing functions wrap their generated markup via svgWrap(svgId, innerMarkup, W, H). */
+const SVGVIEW = {}; // svgId -> {Z, Px, Py}
+function svgView(id){ if(!SVGVIEW[id]) SVGVIEW[id]={Z:1,Px:0,Py:0}; return SVGVIEW[id]; }
+function svgWrap(svgId, inner, W, H){
+  const v=svgView(svgId);
+  // background stays fixed; content group gets the user transform
+  return `<rect width="${W}" height="${H}" fill="var(--paper)"/>`+
+    `<g transform="translate(${v.Px},${v.Py}) scale(${v.Z})">${inner}</g>`;
+}
+function svgResetView(svgId){ SVGVIEW[svgId]={Z:1,Px:0,Py:0}; redrawOne(svgId); }
+function svgZoomAt(svgId, cx, cy, factor){
+  const v=svgView(svgId);
+  // keep (cx,cy) screen point fixed: world = (screen - P)/Z ; Pnew = screen - world*Znew
+  const wx=(cx-v.Px)/v.Z, wy=(cy-v.Py)/v.Z;
+  v.Z*=factor; v.Px=cx-wx*v.Z; v.Py=cy-wy*v.Z;
+  redrawOne(svgId);
+}
+function redrawOne(svgId){
+  if(!ENG) return;
+  if(svgId==='svg_plan_a') drawPlan('svg_plan_a');
+  else if(svgId==='svg_prof_a') drawProfile('svg_prof_a');
+  else if(svgId==='svg_sec') drawSection();
+}
+// convert a mouse event to SVG viewBox coords (accounting for element scaling)
+function svgEventXY(svg, evt, W, H){
+  const r=svg.getBoundingClientRect();
+  return { x:(evt.clientX-r.left)/r.width*W, y:(evt.clientY-r.top)/r.height*H };
+}
+function attachSvgControls(svgId, W, H){
+  const svg=document.getElementById(svgId); if(!svg||svg._vpArmed) return; svg._vpArmed=true;
+  svg.addEventListener('wheel', e=>{ e.preventDefault(); const p=svgEventXY(svg,e,W,H);
+    svgZoomAt(svgId, p.x, p.y, e.deltaY<0?1.12:1/1.12); }, {passive:false});
+  let drag=false, lx=0, ly=0, moved=false;
+  svg.addEventListener('mousedown', e=>{ drag=true; moved=false; const p=svgEventXY(svg,e,W,H); lx=p.x; ly=p.y; });
+  window.addEventListener('mouseup', ()=>{ drag=false; });
+  svg.addEventListener('mousemove', e=>{ if(!drag) return; const p=svgEventXY(svg,e,W,H);
+    const v=svgView(svgId); v.Px+=(p.x-lx); v.Py+=(p.y-ly); lx=p.x; ly=p.y; moved=true; redrawOne(svgId); });
+  // expose moved flag so click-to-set-station on profile doesn't fire after a pan
+  svg._didPan=()=>moved;
+}
+function exportSVG(svgId){
+  const svg=document.getElementById(svgId); const ser=new XMLSerializer().serializeToString(svg);
+  const blob=new Blob([`<?xml version="1.0"?>\n`+ser], {type:'image/svg+xml'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download=svgId+'.svg'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+function exportCanvasPNG(canvasId, name){
+  const cv=document.getElementById(canvasId); const url=cv.toDataURL('image/png');
+  const a=document.createElement('a'); a.href=url; a.download=(name||canvasId)+'.png';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+/* ===== PLAN ===== */
+function planTransform(extra){
+  const s0=ENG.align.staStart,s1=ENG.align.staEnd,n=240;
+  const cl=[],gl=ENG.globalGirders.map(()=>[]);
+  for(let i=0;i<=n;i++){ const s=s0+(s1-s0)*i/n; const c=ENG.getDeckPoint(s,0); cl.push([c.x,c.y]);
+    ENG.globalGirders.forEach((off,k)=>{ const p=ENG.getDeckPoint(s,off); gl[k].push([p.x,p.y]); }); }
+  let all=cl.concat(...gl); if(extra) all=all.concat(extra);
+  const xs=all.map(p=>p[0]),ys=all.map(p=>p[1]);
+  return { cl, gl, minX:Math.min(...xs),maxX:Math.max(...xs),minY:Math.min(...ys),maxY:Math.max(...ys) };
+}
+// element-boundary transition labels (PC/PT/TS/SC/CS/ST)
+function transitionLabel(prevType,nextType){
+  const m={'tan>crv':'PC','crv>tan':'PT','tan>spi':'TS','spi>crv':'SC','crv>spi':'CS','spi>tan':'ST'};
+  return m[prevType+'>'+nextType]||null;
+}
+// nice round station tick interval for a given total length
+function stationInterval(L){
+  const targets=[10,25,50,100,200,250,500,1000,2000,2500,5000];
+  for(const t of targets){ if(L/t<=20) return t; }
+  return 10000;
+}
+function drawPlan(svgId){
+  const svg=document.getElementById(svgId);
+  const vb=svg.viewBox.baseVal; const W=vb&&vb.width?vb.width:1200, H=vb&&vb.height?vb.height:520; const pad=40;
+  const T=planTransform();
+  const sc=Math.min((W-2*pad)/Math.max(1e-6,T.maxX-T.minX),(H-2*pad)/Math.max(1e-6,T.maxY-T.minY));
+  const ox=pad+((W-2*pad)-(T.maxX-T.minX)*sc)/2, oy=pad+((H-2*pad)-(T.maxY-T.minY)*sc)/2;
+  const TX=x=>ox+(x-T.minX)*sc, TY=y=>H-(oy+(y-T.minY)*sc);
+  const path=pts=>'M'+pts.map(p=>TX(p[0]).toFixed(1)+','+TY(p[1]).toFixed(1)).join(' L');
+  const s0=ENG.align.staStart, s1=ENG.align.staEnd;
+  let s=``;
+  // girder lines
+  T.gl.forEach(line=>{ s+=`<path d="${path(line)}" fill="none" stroke="var(--graphite)" stroke-width="1"/>`; });
+  // alignment centerline
+  s+=`<path d="${path(T.cl)}" fill="none" stroke="var(--ink)" stroke-width="2" stroke-dasharray="8 4 2 4"/>`;
+  // station ticks + labels along the alignment
+  const di=stationInterval(s1-s0);
+  const first=Math.ceil(s0/di)*di;
+  for(let st=first; st<=s1+1e-6; st+=di){
+    const p=ENG.getDeckPoint(st,0); const a=ENG.align.at(st); const nrm=a.brg+Math.PI/2;
+    const t1=ENG.getDeckPoint(st,0), tickLen=7/sc;
+    const tx1=t1.x+Math.sin(nrm)*tickLen, ty1=t1.y+Math.cos(nrm)*tickLen;
+    const tx2=t1.x-Math.sin(nrm)*tickLen, ty2=t1.y-Math.cos(nrm)*tickLen;
+    s+=`<line x1="${TX(tx1)}" y1="${TY(ty1)}" x2="${TX(tx2)}" y2="${TY(ty2)}" stroke="var(--ink-soft)" stroke-width="1"/>`;
+    s+=`<text x="${TX(tx1)+3}" y="${TY(ty1)}" font-size="8.5" font-family="monospace" fill="var(--ink-soft)">${formatStation(st)}</text>`;
+  }
+  // element transition points (PC/PT/TS/SC/CS/ST)
+  const els=ENG.align.elems;
+  for(let i=0;i<els.length-1;i++){
+    const lbl=transitionLabel(els[i].type||elemType(i), els[i+1].type||elemType(i+1));
+    const bs=els[i].staEnd; const p=ENG.getDeckPoint(bs,0);
+    s+=`<circle cx="${TX(p.x)}" cy="${TY(p.y)}" r="3.5" fill="var(--oxide)"/>`;
+    if(lbl) s+=`<text x="${TX(p.x)+5}" y="${TY(p.y)-5}" font-size="9" font-family="monospace" font-weight="bold" fill="var(--oxide)">${lbl} ${formatStation(bs)}</text>`;
+  }
+  // POB / POE markers
+  const pPOB=ENG.getDeckPoint(s0,0), pPOE=ENG.getDeckPoint(s1,0);
+  s+=`<circle cx="${TX(pPOB.x)}" cy="${TY(pPOB.y)}" r="4" fill="none" stroke="var(--ink)" stroke-width="1.5"/>`;
+  s+=`<text x="${TX(pPOB.x)-5}" y="${TY(pPOB.y)-6}" font-size="9" font-family="monospace" fill="var(--ink)" text-anchor="end">POB ${formatStation(s0)}</text>`;
+  s+=`<text x="${TX(pPOE.x)+6}" y="${TY(pPOE.y)+10}" font-size="9" font-family="monospace" fill="var(--ink)">POE ${formatStation(s1)}</text>`;
+  // active station cut + marker
+  const a=ENG.getDeckPoint(ACTIVE_STA,0),offs=ENG.globalGirders;
+  if(offs.length){ const e1=ENG.getDeckPoint(ACTIVE_STA,Math.min(...offs)-4),e2=ENG.getDeckPoint(ACTIVE_STA,Math.max(...offs)+4);
+    s+=`<line x1="${TX(e1.x)}" y1="${TY(e1.y)}" x2="${TX(e2.x)}" y2="${TY(e2.y)}" stroke="var(--cyan)" stroke-width="2"/>`; }
+  s+=`<circle cx="${TX(a.x)}" cy="${TY(a.y)}" r="4" fill="var(--cyan)"/>`;
+  // north arrow (top-right, fixed)
+  s+=`<g transform="translate(${W-46},46)"><line x1="0" y1="14" x2="0" y2="-14" stroke="var(--ink)" stroke-width="1.5"/><path d="M0,-16 L4,-8 L-4,-8 Z" fill="var(--ink)"/><text x="0" y="26" font-size="10" font-family="monospace" fill="var(--ink)" text-anchor="middle">N</text></g>`;
+  svg.innerHTML=svgWrap(svgId, s, W, H);
+  attachSvgControls(svgId, W, H);
+  // store transform for hover
+  PLANVIEWXF={TX,TY,minX:T.minX,minY:T.minY,sc,ox,oy,W,H,s0,s1};
+}
+function elemType(i){ return (ELEMS[i]&&ELEMS[i].type)||'tan'; }
+let PLANVIEWXF=null;
+
+/* ===== PROFILE ===== */
+function drawProfile(svgId){
+  const svg=document.getElementById(svgId);
+  const vb=svg.viewBox.baseVal; const W=vb&&vb.width?vb.width:1200, H=vb&&vb.height?vb.height:340; const pad=44, padB=30;
+  const s0=ENG.align.staStart,s1=ENG.align.staEnd,n=300; const pts=[];
+  for(let i=0;i<=n;i++){ const s=s0+(s1-s0)*i/n; pts.push([s,ENG.prof.elevAt(s)]); }
+  const zs=pts.map(p=>p[1]),minZ=Math.min(...zs),maxZ=Math.max(...zs),padZ=(maxZ-minZ)*0.15+0.5,lo=minZ-padZ,hi=maxZ+padZ;
+  const TX=s=>pad+(s-s0)/(s1-s0)*(W-2*pad), TY=z=>H-padB-(z-lo)/(hi-lo)*(H-pad-padB);
+  let s=``;
+  // horizontal elevation gridlines
+  for(let i=0;i<=5;i++){ const z=lo+(hi-lo)*i/5,y=TY(z);
+    s+=`<line x1="${pad}" y1="${y}" x2="${W-pad}" y2="${y}" stroke="var(--graphite)" stroke-width="0.5" opacity="0.45"/>`;
+    s+=`<text x="6" y="${y+3}" font-size="9" font-family="monospace" fill="var(--ink-soft)">${z.toFixed(2)}</text>`; }
+  // vertical station gridlines + labels
+  const di=stationInterval(s1-s0); const first=Math.ceil(s0/di)*di;
+  for(let st=first; st<=s1+1e-6; st+=di){ const x=TX(st);
+    s+=`<line x1="${x}" y1="${pad-8}" x2="${x}" y2="${H-padB}" stroke="var(--graphite)" stroke-width="0.5" opacity="0.4"/>`;
+    s+=`<text x="${x}" y="${H-padB+14}" font-size="8.5" font-family="monospace" fill="var(--ink-soft)" text-anchor="middle">${formatStation(st)}</text>`; }
+  // profile grade line
+  s+=`<path d="M${pts.map(p=>TX(p[0]).toFixed(1)+','+TY(p[1]).toFixed(1)).join(' L')}" fill="none" stroke="var(--ink)" stroke-width="2"/>`;
+  // PVI markers with elevation, grades, and BVC/EVC
+  ENG.prof.pvis.forEach((v,i)=>{ const x=TX(v.sta),y=TY(v.elev);
+    s+=`<circle cx="${x}" cy="${y}" r="3.5" fill="var(--oxide)"/>`;
+    s+=`<text x="${x}" y="${y-8}" font-size="9" font-family="monospace" font-weight="bold" fill="var(--oxide)" text-anchor="middle">PVI ${formatStation(v.sta)}</text>`;
+    s+=`<text x="${x}" y="${y-19}" font-size="8.5" font-family="monospace" fill="var(--ink-soft)" text-anchor="middle">El ${v.elev.toFixed(2)}</text>`;
+    if(v.L>0){ const bvc=v.sta-v.L/2, evc=v.sta+v.L/2;
+      [['BVC',bvc],['EVC',evc]].forEach(([lab,st])=>{ const xx=TX(st), zz=ENG.prof.elevAt(st), yy=TY(zz);
+        s+=`<circle cx="${xx}" cy="${yy}" r="2.5" fill="none" stroke="var(--cyan)" stroke-width="1.2"/>`;
+        s+=`<text x="${xx}" y="${yy+14}" font-size="8" font-family="monospace" fill="var(--cyan)" text-anchor="middle">${lab}</text>`; }); }
+    // grade label on outgoing tangent midpoint
+    if(v.gradeOut!=null && i<ENG.prof.pvis.length-1){ const nv=ENG.prof.pvis[i+1];
+      const sm=(v.sta+nv.sta)/2, zm=ENG.prof.elevAt(sm);
+      s+=`<text x="${TX(sm)}" y="${TY(zm)+(v.gradeOut<0?-6:14)}" font-size="9" font-family="monospace" fill="var(--ink)" text-anchor="middle">${(v.gradeOut*100).toFixed(2)}%</text>`; }
+  });
+  // substructure unit ticks
+  sortedUnits().forEach(u=>{ if(u.sta>=s0&&u.sta<=s1){ const x=TX(u.sta);
+    s+=`<line x1="${x}" y1="${pad-8}" x2="${x}" y2="${H-padB}" stroke="${u.type==='pier'?'var(--cyan)':'var(--ink-soft)'}" stroke-width="1" opacity="0.5" stroke-dasharray="2 2"/>`; } });
+  // active station marker
+  s+=`<line x1="${TX(ACTIVE_STA)}" y1="${pad-8}" x2="${TX(ACTIVE_STA)}" y2="${H-padB}" stroke="var(--cyan)" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+  svg.innerHTML=svgWrap(svgId, s, W, H);
+  attachSvgControls(svgId, W, H);
+  PROFVIEWXF={TX,TY,s0,s1,lo,hi,pad,padB,W,H};
+}
+let PROFVIEWXF=null;
+
+/* ===== SECTION ===== */
+/* ===== SECTION STATION CONTROLS ===== */
+function syncSectionControls(){
+  if(!ENG) return;
+  const s0=ENG.align.staStart, s1=ENG.align.staEnd;
+  const sl=document.getElementById('sec_sta_slider'), box=document.getElementById('sec_sta_in');
+  if(sl){ sl.min=s0; sl.max=s1; sl.step=Math.max(0.01,(s1-s0)/2000); sl.value=ACTIVE_STA; }
+  if(box && document.activeElement!==box) box.value=formatStation(ACTIVE_STA);
+}
+function setActiveSta(sta, redrawAlign){
+  if(!ENG) return;
+  const s0=ENG.align.staStart, s1=ENG.align.staEnd;
+  ACTIVE_STA=Math.max(s0,Math.min(s1,sta));
+  syncSectionControls(); drawSection();
+  if(redrawAlign){ if(document.getElementById('svg_plan_a')) drawPlan('svg_plan_a'); if(document.getElementById('svg_prof_a')) drawProfile('svg_prof_a'); }
+}
+function renderSnapButtons(){
+  const host=document.getElementById('sec_snap'); if(!host||!ENG) return;
+  const su=sortedUnits(); let h='';
+  su.forEach(u=>{ h+=`<button class="sm ghost" data-snap="${u.sta}" style="font-size:10px; padding:2px 6px;" title="Jump to ${u.name} (${formatStation(u.sta)})">${u.name}</button>`; });
+  host.innerHTML=h;
+  host.querySelectorAll('[data-snap]').forEach(b=>b.addEventListener('click',()=>setActiveSta(+b.dataset.snap,true)));
+}
+function drawSection(){
+  const svg=document.getElementById('svg_sec'); const W=960,H=320;
+  const padL=58, padR=40, padTop=58, padBot=78;
+  document.getElementById('sec_sta').textContent='@ sta '+formatStation(ACTIVE_STA);
+  const span=spanOfSta(ACTIVE_STA); const offs=girdersForSpan(span); const edges=edgesForSpan(span);
+  const cl=curbAt(ACTIVE_STA,'L'), cr=curbAt(ACTIVE_STA,'R');
+  const oLo=Math.min(edges.l,...offs)-3, oHi=Math.max(edges.r,...offs)+3, n=60, deck=[];
+  // deck surface is sampled only between the actual deck edges (it must not extend past them)
+  for(let i=0;i<=n;i++){ const o=edges.l+(edges.r-edges.l)*i/n; deck.push([o,ENG.getDeckPoint(ACTIVE_STA,o).z]); }
+  // per-girder stack
+  const slab=ENG.depths.slab, minH=ENG.depths.minHaunch;
+  const gdata=offs.map((o,bi)=>{
+    const deckZ=ENG.getDeckPoint(ACTIVE_STA,o).z;
+    const camber=resolveDepth('camber',bi,span), beamD=resolveDepth('beam',bi,span), bearing=resolveDepth('bearing',bi,span);
+    const botDeck=deckZ-slab;            // bottom of slab
+    const topBeam=botDeck-(minH+camber); // top of beam (haunch = minH + camber at the seat)
+    const botBeam=topBeam-beamD;         // bottom of beam
+    const seatZ=botBeam-bearing;         // top of substructure (beam seat)
+    return {o,bi,deckZ,botDeck,topBeam,botBeam,seatZ,camber,beamD,bearing};
+  });
+  const zsAll=deck.map(p=>p[1]).concat(gdata.map(g=>g.seatZ));
+  const minZ=Math.min(...zsAll),maxZ=Math.max(...zsAll),zPad=(maxZ-minZ)*0.12+0.4,lo=minZ-zPad,hi=maxZ+zPad;
+  const TX=o=>padL+(o-oLo)/(oHi-oLo)*(W-padL-padR), TY=z=>H-padBot-(z-lo)/(hi-lo)*(H-padTop-padBot);
+  let s=``;
+  // ---- elevation grid + axis ----
+  for(let i=0;i<=4;i++){ const z=lo+(hi-lo)*i/4; s+=`<line x1="${padL}" y1="${TY(z)}" x2="${W-padR}" y2="${TY(z)}" stroke="var(--graphite)" stroke-width="0.4" opacity="0.4"/>`;
+    s+=`<text x="${padL-6}" y="${TY(z)+3}" font-size="8.5" font-family="monospace" fill="var(--ink-soft)" text-anchor="end">${z.toFixed(2)}</text>`; }
+  // ---- deck slab (top surface + bottom offset by slab thickness) ----
+  const botPts=deck.map(p=>[p[0],p[1]-slab]);
+  s+=`<path d="M${deck.map(p=>TX(p[0]).toFixed(1)+','+TY(p[1]).toFixed(1)).join(' L')} L${botPts.slice().reverse().map(p=>TX(p[0]).toFixed(1)+','+TY(p[1]).toFixed(1)).join(' L')} Z" fill="rgba(27,110,120,.10)" stroke="none"/>`;
+  s+=`<path d="M${deck.map(p=>TX(p[0]).toFixed(1)+','+TY(p[1]).toFixed(1)).join(' L')}" fill="none" stroke="var(--cyan)" stroke-width="2.5"/>`;
+  s+=`<path d="M${botPts.map(p=>TX(p[0]).toFixed(1)+','+TY(p[1]).toFixed(1)).join(' L')}" fill="none" stroke="var(--cyan)" stroke-width="1" opacity="0.6"/>`;
+  // ---- girders: haunch + beam box + bearing, to scale ----
+  gdata.forEach(g=>{ const x=TX(g.o);
+    // haunch (bottom of slab to top of beam)
+    s+=`<line x1="${x}" y1="${TY(g.botDeck)}" x2="${x}" y2="${TY(g.topBeam)}" stroke="var(--ink-soft)" stroke-width="3" opacity="0.6"/>`;
+    // beam as a slim box
+    const bw=7;
+    s+=`<rect x="${x-bw/2}" y="${TY(g.topBeam)}" width="${bw}" height="${Math.max(1,TY(g.botBeam)-TY(g.topBeam))}" fill="var(--ink)" opacity="0.85" rx="1"/>`;
+    // bearing assembly (short, wider)
+    s+=`<rect x="${x-bw}" y="${TY(g.botBeam)}" width="${bw*2}" height="${Math.max(1,TY(g.seatZ)-TY(g.botBeam))}" fill="var(--oxide)" opacity="0.7"/>`;
+    // seat dot + elevation
+    s+=`<circle cx="${x}" cy="${TY(g.seatZ)}" r="2.5" fill="var(--oxide)"/>`;
+    s+=`<text x="${x}" y="${TY(g.seatZ)+13}" font-size="8" font-family="monospace" fill="var(--oxide)" text-anchor="middle" font-weight="bold">${g.seatZ.toFixed(3)}</text>`;
+    // top-of-deck elevation over girder
+    s+=`<text x="${x}" y="${TY(g.deckZ)-6}" font-size="8" font-family="monospace" fill="var(--cyan)" text-anchor="middle">${g.deckZ.toFixed(3)}</text>`;
+    // girder label + offset
+    s+=`<text x="${x}" y="${H-padBot+30}" font-size="8.5" font-family="monospace" fill="var(--ink-soft)" text-anchor="middle">G${g.bi+1}</text>`;
+    s+=`<text x="${x}" y="${H-padBot+42}" font-size="8" font-family="monospace" fill="var(--graphite)" text-anchor="middle">${g.o}</text>`;
+  });
+  // ---- vertical reference lines: deck edges, curbs ----
+  const vline=(o,col,lab,dash)=>{ s+=`<line x1="${TX(o)}" y1="${padTop-6}" x2="${TX(o)}" y2="${H-padBot}" stroke="${col}" stroke-width="1" ${dash?`stroke-dasharray="${dash}"`:''} opacity="0.7"/>`;
+    s+=`<text x="${TX(o)}" y="${padTop-9}" font-size="8.5" font-family="monospace" fill="${col}" text-anchor="middle">${lab}</text>`; };
+  vline(edges.l,'var(--oxide)','Edge L','4 3'); vline(edges.r,'var(--oxide)','Edge R','4 3');
+  vline(cl,'var(--cyan)','Curb L','5 3'); vline(cr,'var(--cyan)','Curb R','5 3');
+  // PGL (offset 0) and bridge CL
+  s+=`<line x1="${TX(0)}" y1="${padTop-6}" x2="${TX(0)}" y2="${H-padBot}" stroke="var(--graphite)" stroke-width="0.75" stroke-dasharray="2 4"/>`;
+  s+=`<text x="${TX(0)}" y="${padTop-9}" font-size="8.5" font-family="monospace" fill="var(--graphite)" text-anchor="middle">PGL</text>`;
+  const clMid=(edges.l+edges.r)/2;
+  if(Math.abs(clMid)>1e-6){ s+=`<line x1="${TX(clMid)}" y1="${padTop-6}" x2="${TX(clMid)}" y2="${H-padBot}" stroke="var(--ink-soft)" stroke-width="0.75" stroke-dasharray="2 4"/>`;
+    s+=`<text x="${TX(clMid)}" y="${padTop-9}" font-size="8.5" font-family="monospace" fill="var(--ink-soft)" text-anchor="middle">CL</text>`; }
+  // ---- cross-slope % labels: slope between adjacent girders (or edge-to-girder) ----
+  const slopeLabel=(o1,z1,o2,z2)=>{ if(Math.abs(o2-o1)<1e-6)return; const pct=((z2-z1)/(o2-o1))*100;
+    const xm=(TX(o1)+TX(o2))/2, ym=(TY(z1)+TY(z2))/2-6;
+    s+=`<text x="${xm}" y="${ym}" font-size="8" font-family="monospace" fill="var(--ink)" text-anchor="middle">${pct>=0?'+':''}${pct.toFixed(2)}%</text>`; };
+  for(let k=0;k<gdata.length-1;k++) slopeLabel(gdata[k].o,gdata[k].deckZ,gdata[k+1].o,gdata[k+1].deckZ);
+  // ---- dimension lines: overall deck width + overhangs ----
+  const dimY=H-padBot+54;
+  const dim=(o1,o2,lab,y)=>{ const x1=TX(o1),x2=TX(o2); s+=`<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="var(--ink-soft)" stroke-width="0.75"/>`;
+    s+=`<line x1="${x1}" y1="${y-4}" x2="${x1}" y2="${y+4}" stroke="var(--ink-soft)" stroke-width="0.75"/>`;
+    s+=`<line x1="${x2}" y1="${y-4}" x2="${x2}" y2="${y+4}" stroke="var(--ink-soft)" stroke-width="0.75"/>`;
+    s+=`<text x="${(x1+x2)/2}" y="${y-3}" font-size="8" font-family="monospace" fill="var(--ink-soft)" text-anchor="middle">${lab}</text>`; };
+  dim(edges.l,edges.r,`deck width ${(edges.r-edges.l).toFixed(2)}'`,dimY);
+  if(gdata.length){ dim(edges.l,gdata[0].o,`OH ${(gdata[0].o-edges.l).toFixed(2)}'`,dimY-16);
+    dim(gdata[gdata.length-1].o,edges.r,`OH ${(edges.r-gdata[gdata.length-1].o).toFixed(2)}'`,dimY-16); }
+  // ---- title + legend ----
+  s+=`<text x="${padL}" y="20" font-size="11" font-family="monospace" fill="var(--ink)" font-weight="bold">DECK CROSS-SECTION \u2014 looking up-station</text>`;
+  const leg=[['var(--cyan)','top of deck'],['var(--ink)','beam'],['var(--oxide)','bearing / seat'],['var(--graphite)','PGL / CL']];
+  let lx=padL; leg.forEach(([c,t])=>{ s+=`<rect x="${lx}" y="30" width="9" height="9" fill="${c}" opacity="0.85"/><text x="${lx+13}" y="38" font-size="8.5" font-family="monospace" fill="var(--ink-soft)">${t}</text>`; lx+=t.length*6.0+34; });
+  svg.innerHTML=svgWrap('svg_sec', s, W, H);
+  attachSvgControls('svg_sec', W, H);
+}
+
+/* ===== HEATMAP ===== */
+let HEAT=null; // {pts:[{sta,off,x,y,z,px,py}], minZ, maxZ}
+let HEATVIEW={Z:1,Px:0,Py:0};
+function zColor(t){ // t 0..1 -> blue(low) to red(high), through paper-ish mid
+  const r=Math.round(40+t*200), g=Math.round(90+(1-Math.abs(t-0.5)*2)*90), b=Math.round(160-t*120);
+  return `rgb(${r},${g},${b})`;
+}
+function drawHeatmap(){
+  const cv=document.getElementById('heat'); const ctx=cv.getContext('2d');
+  const rect0=cv.getBoundingClientRect();
+  if((rect0.width||cv.clientWidth||0)<1){ return; } // hidden; will draw when tab is shown
+  // ---- HiDPI: size backing store to display size * devicePixelRatio for sharp rendering ----
+  const dpr=Math.max(1, window.devicePixelRatio||1);
+  const rect=rect0;
+  const cssW=Math.max(300, Math.round(rect.width||cv.clientWidth||1000));
+  const cssH=Math.round(cssW*0.56); // keep ~1000x560 aspect
+  if(cv.width!==Math.round(cssW*dpr) || cv.height!==Math.round(cssH*dpr)){
+    cv.width=Math.round(cssW*dpr); cv.height=Math.round(cssH*dpr);
+    cv.style.height=cssH+'px';
+  }
+  ctx.setTransform(dpr,0,0,dpr,0,0); // draw in CSS pixels; backing store is dpr-scaled
+  const W=cssW, H=cssH;
+  const legendW=150;                    // right-side legend panel
+  const pad=42, padR=pad+legendW;       // extra right margin for legend
+  ctx.clearRect(0,0,W,H);
+  const paper=getComputedStyle(document.documentElement).getPropertyValue('--paper').trim()||'#F6F3EA';
+  ctx.fillStyle=paper; ctx.fillRect(0,0,W,H);
+  const divisions=+document.getElementById('divs').value;
+  const su=sortedUnits(); if(su.length<2){ return; }
+
+  // ---- sample grid for fill ----
+  const cols=[]; const NW=40;
+  for(let i=0;i<su.length-1;i++){ const span=i+1; const s0=su[i].sta,s1=su[i+1].sta; const ed=edgesForSpan(span);
+    for(let j=0;j<=divisions;j++){ const sta=s0+(s1-s0)*j/divisions; const samples=[];
+      for(let w=0;w<=NW;w++){ const off=ed.l+(ed.r-ed.l)*w/NW; const p=ENG.getDeckPoint(sta,off); samples.push({off,z:p.z,x:p.x,y:p.y}); }
+      cols.push({sta,span,samples}); } }
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity,minZ=Infinity,maxZ=-Infinity;
+  cols.forEach(c=>c.samples.forEach(s=>{ minX=Math.min(minX,s.x);maxX=Math.max(maxX,s.x);minY=Math.min(minY,s.y);maxY=Math.max(maxY,s.y);minZ=Math.min(minZ,s.z);maxZ=Math.max(maxZ,s.z); }));
+  const sc=Math.min((W-pad-padR)/Math.max(1e-6,maxX-minX),(H-2*pad)/Math.max(1e-6,maxY-minY));
+  const ox=pad+((W-pad-padR)-(maxX-minX)*sc)/2, oy=pad+((H-2*pad)-(maxY-minY)*sc)/2;
+  const HV=HEATVIEW;  // user pan/zoom
+  const TX=x=>{ const sx=ox+(x-minX)*sc; return sx*HV.Z+HV.Px; };
+  const TY=y=>{ const sy=H-(oy+(y-minY)*sc); return sy*HV.Z+HV.Py; };
+  const zT=z=>(maxZ-minZ<1e-9)?0.5:(z-minZ)/(maxZ-minZ);
+
+  // ---- elevation fill (slightly muted so linework reads on top) ----
+  const LY=id=>{ const el=document.getElementById(id); return el?el.checked:true; };
+  if(LY('ly_fill')){
+  ctx.globalAlpha=0.72;
+  for(let i=0;i<cols.length-1;i++){ const A=cols[i],B=cols[i+1]; if(A.span!==B.span) continue;
+    for(let w=0;w<A.samples.length-1;w++){
+      const p1=A.samples[w],p2=A.samples[w+1],p3=B.samples[w+1],p4=B.samples[w];
+      const tz=(zT(p1.z)+zT(p2.z)+zT(p3.z)+zT(p4.z))/4; ctx.fillStyle=zColor(tz);
+      ctx.beginPath(); ctx.moveTo(TX(p1.x),TY(p1.y)); ctx.lineTo(TX(p2.x),TY(p2.y));
+      ctx.lineTo(TX(p3.x),TY(p3.y)); ctx.lineTo(TX(p4.x),TY(p4.y)); ctx.closePath(); ctx.fill(); } }
+  ctx.globalAlpha=1;
+  }
+
+  // line helper over alignment offset
+  function strokeOffset(off, fromS, toS, n, dash){ ctx.save(); if(dash)ctx.setLineDash(dash); ctx.beginPath();
+    for(let k=0;k<=n;k++){ const s=fromS+(toS-fromS)*k/n; const p=ENG.getDeckPoint(s,off); const px=TX(p.x),py=TY(p.y); if(k===0)ctx.moveTo(px,py); else ctx.lineTo(px,py);} ctx.stroke(); ctx.restore(); }
+  function strokeBearing(bl, ed){ ctx.beginPath(); for(let w=0;w<=24;w++){ const off=ed.l+(ed.r-ed.l)*w/24; const st=staOnBearing(bl.sta,bl.skew,off); const p=ENG.getDeckPoint(st,off); const px=TX(p.x),py=TY(p.y); if(w===0)ctx.moveTo(px,py); else ctx.lineTo(px,py);} ctx.stroke(); }
+
+  const s0all=su[0].sta, s1all=su[su.length-1].sta;
+  const INK='#1C1A17', CYAN='#1B6E78', SOFT='#5A554B', OX='#9C3B22', GRAPH='#8B8576';
+
+  // ---- deck edges (oxide) ----
+  if(LY('ly_edge')){ ctx.strokeStyle=OX; ctx.lineWidth=1.5;
+    for(let i=0;i<su.length-1;i++){ const span=i+1, ed=edgesForSpan(span);
+      strokeOffset(ed.l, su[i].sta, su[i+1].sta, 30); strokeOffset(ed.r, su[i].sta, su[i+1].sta, 30); } }
+
+  // ---- girder lines (graphite), per span ----
+  if(LY('ly_gird')){ ctx.strokeStyle=GRAPH; ctx.lineWidth=1;
+    for(let i=0;i<su.length-1;i++){ const span=i+1; girdersForSpan(span).forEach(off=> strokeOffset(off, su[i].sta, su[i+1].sta, 30)); } }
+
+  // ---- pier / abutment centerlines (solid) + bearing centerlines (dashed) ----
+  su.forEach(u=>{ const span=Math.max(1,Math.min(su.length-1,spanOfSta(u.sta))); const ed=edgesForSpan(span);
+    if(LY('ly_sub')){ ctx.strokeStyle = u.type==='pier'?CYAN:SOFT; ctx.lineWidth=2.25; strokeBearing({sta:u.sta,skew:u.skew}, ed); }
+    if(LY('ly_brg')){ bearingLinesFor(u).forEach(bl=>{ if(Math.abs(bl.sta-u.sta)<1e-6) return;
+      ctx.save(); ctx.setLineDash([6,3]); ctx.strokeStyle=CYAN; ctx.lineWidth=1.5; strokeBearing(bl, ed); ctx.restore(); }); } });
+
+  // ---- roadway alignment centerline (dark dash-dot) ----
+  if(LY('ly_align')){ ctx.strokeStyle=INK; ctx.lineWidth=2; strokeOffset(0, s0all, s1all, 240, [9,4,2,4]); }
+
+  // ---- station callouts for each substructure unit + each distinct bearing line ----
+  if(LY('ly_sta')){
+  ctx.font='10px monospace'; ctx.textBaseline='middle';
+  su.forEach(u=>{ const span=Math.max(1,Math.min(su.length-1,spanOfSta(u.sta))); const ed=edgesForSpan(span);
+    const top=ENG.getDeckPoint(staOnBearing(u.sta,u.skew,ed.l), ed.l);
+    const lx=TX(top.x), ly=TY(top.y);
+    ctx.fillStyle = u.type==='pier'?CYAN:SOFT; ctx.textAlign='right';
+    ctx.fillText(`${u.name}`, lx-6, ly-7);
+    ctx.fillText(`Sta ${formatStation(u.sta)}`, lx-6, ly+5);
+    if(u.skew) ctx.fillText(`Skew ${u.skew.toFixed(1)}°`, lx-6, ly+17);
+    // distinct bearing-line station labels (e.g. dual bearings at a pier), placed at right edge
+    ctx.font='8.5px monospace';
+    bearingLinesFor(u).forEach(bl=>{ if(Math.abs(bl.sta-u.sta)<1e-6) return;
+      const bp=ENG.getDeckPoint(staOnBearing(bl.sta,bl.skew,ed.r), ed.r);
+      ctx.fillStyle=CYAN; ctx.textAlign='left';
+      ctx.fillText(`${bl.label.replace(u.name+' ','')} Sta ${formatStation(bl.sta)}`, TX(bp.x)+5, TY(bp.y)); });
+    ctx.font='10px monospace'; });
+  }
+
+  // ---- span length labels (midspan, on centerline) ----
+  if(LY('ly_sta')){ ctx.fillStyle=INK; ctx.textAlign='center'; ctx.font='10px monospace';
+    for(let i=0;i<su.length-1;i++){ const sm=(su[i].sta+su[i+1].sta)/2; const p=ENG.getDeckPoint(sm,0);
+      ctx.fillText(`Span ${i+1}: ${(su[i+1].sta-su[i].sta).toFixed(2)} ft`, TX(p.x), TY(p.y)-2); } }
+
+  // ---- elevation nodes at girder×support ----
+  if(LY('ly_elev')){ ctx.font='8.5px monospace';
+    su.forEach(u=>bearingLinesFor(u).forEach(bl=>{ const span=Math.max(1,Math.min(su.length-1,spanOfSta(bl.sta))); const gset=girdersForSpan(span);
+      gset.forEach(off=>{ const st=staOnBearing(bl.sta,bl.skew,off); const p=ENG.getDeckPoint(st,off);
+        const px=TX(p.x),py=TY(p.y);
+        ctx.fillStyle=INK; ctx.beginPath(); ctx.arc(px,py,1.7,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle=INK; ctx.textAlign='left'; ctx.fillText(p.z.toFixed(2), px+3, py); }); })); }
+
+  // ---- girder station/offset callouts at supports (off by default; dense) ----
+  if(LY('ly_gpt')){ ctx.font='7.5px monospace';
+    su.forEach(u=>bearingLinesFor(u).forEach(bl=>{ const span=Math.max(1,Math.min(su.length-1,spanOfSta(bl.sta))); const gset=girdersForSpan(span);
+      gset.forEach((off,gi)=>{ const st=staOnBearing(bl.sta,bl.skew,off); const p=ENG.getDeckPoint(st,off);
+        const px=TX(p.x),py=TY(p.y);
+        ctx.fillStyle=SOFT; ctx.textAlign='left';
+        ctx.fillText(`G${gi+1} S${st.toFixed(1)} O${off.toFixed(1)}`, px+3, py+9); }); })); }
+
+  // ---- north-ish station arrow at POB ----
+  ctx.fillStyle=SOFT; ctx.textAlign='left'; ctx.font='9px monospace';
+  const pStart=ENG.getDeckPoint(s0all,0); ctx.fillText('▲ incr. station', TX(pStart.x)+4, TY(pStart.y)+14);
+
+  // ---- LEGEND panel ----
+  const lx0=W-legendW+6, ly0=pad;
+  ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.fillRect(lx0-6, ly0-10, legendW, 260);
+  ctx.strokeStyle=GRAPH; ctx.lineWidth=1; ctx.strokeRect(lx0-6, ly0-10, legendW, 260);
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.fillStyle=INK; ctx.font='10px monospace'; ctx.fillText('LEGEND', lx0, ly0+2);
+  const items=[
+    {c:INK, dash:[9,4,2,4], t:'Roadway alignment'},
+    {c:GRAPH, dash:[], t:'Girder line'},
+    {c:CYAN, dash:[], t:'Pier centerline'},
+    {c:SOFT, dash:[], t:'Abutment centerline'},
+    {c:CYAN, dash:[6,3], t:'Bearing centerline'},
+    {c:OX, dash:[], t:'Deck edge'}
+  ];
+  let yy=ly0+22;
+  items.forEach(it=>{ ctx.strokeStyle=it.c; ctx.lineWidth=2; ctx.save(); if(it.dash.length)ctx.setLineDash(it.dash);
+    ctx.beginPath(); ctx.moveTo(lx0, yy); ctx.lineTo(lx0+26, yy); ctx.stroke(); ctx.restore();
+    ctx.fillStyle=INK; ctx.font='9px monospace'; ctx.fillText(it.t, lx0+32, yy); yy+=18; });
+  yy+=4; ctx.fillStyle=SOFT; ctx.font='8.5px monospace';
+  ctx.fillText('• node = top-of-deck elev', lx0, yy); yy+=13;
+  ctx.fillText('  at girder × bearing', lx0, yy); yy+=13;
+  ctx.fillText('G# S# O# = girder, sta,', lx0, yy); yy+=11;
+  ctx.fillText('  offset (toggle)', lx0, yy); yy+=18;
+  // elevation gradient swatch in legend
+  ctx.fillStyle=INK; ctx.font='9px monospace'; ctx.fillText('Elevation (ft)', lx0, yy); yy+=12;
+  const gw=legendW-24, gx=lx0, gh=10;
+  for(let i=0;i<gw;i++){ ctx.fillStyle=zColor(i/gw); ctx.fillRect(gx+i, yy, 1, gh); }
+  ctx.strokeStyle=GRAPH; ctx.lineWidth=1; ctx.strokeRect(gx, yy, gw, gh);
+  ctx.fillStyle=SOFT; ctx.font='8px monospace'; ctx.textAlign='left';
+  ctx.fillText(minZ.toFixed(2), gx, yy+gh+8); ctx.textAlign='right'; ctx.fillText(maxZ.toFixed(2), gx+gw, yy+gh+8);
+
+  HEAT={cols,minX,maxX,minY,maxY,minZ,maxZ,TX,TY,sc,ox,oy,dpr,Hcss:H};
+  document.getElementById('leg_lo').textContent=minZ.toFixed(2);
+  document.getElementById('leg_hi').textContent=maxZ.toFixed(2);
+  const grad=document.getElementById('leg_grad');
+  grad.style.background=`linear-gradient(to right, ${zColor(0)}, ${zColor(0.5)}, ${zColor(1)})`;
+}
+
+/* heatmap hover: invert plan to nearest (sta, off) by scanning cols */
+function heatHover(evt){
+  if(!HEAT||!ENG) return;
+  const cv=document.getElementById('heat'); const r=cv.getBoundingClientRect();
+  // screen px in canvas backing-store coords
+  const mx=(evt.clientX-r.left)*(cv.width/r.width), my=(evt.clientY-r.top)*(cv.height/r.height);
+  // account for HiDPI scaling of the backing store
+  const dpr=HEAT.dpr||1;
+  const bx=mx/dpr, by=my/dpr;
+  // undo user pan/zoom
+  const HV=HEATVIEW; const sx=(bx-HV.Px)/HV.Z, sy=(by-HV.Py)/HV.Z;
+  // undo base world->screen transform: TX = ox+(x-minX)*sc ; TY = H-(oy+(y-minY)*sc)
+  const Hcss=HEAT.Hcss;
+  const wx=HEAT.minX+(sx-HEAT.ox)/HEAT.sc;
+  const wy=HEAT.minY+((Hcss-sy)-HEAT.oy)/HEAT.sc;
+  // find nearest station on the alignment to (wx,wy), then the true offset and elevation
+  const s0=ENG.align.staStart, s1=ENG.align.staEnd;
+  let bestS=s0, bd=Infinity;
+  const N=400;
+  for(let i=0;i<=N;i++){ const st=s0+(s1-s0)*i/N; const p=ENG.getDeckPoint(st,0); const d=(p.x-wx)**2+(p.y-wy)**2; if(d<bd){bd=d;bestS=st;} }
+  // refine with a local search
+  let lo=Math.max(s0,bestS-(s1-s0)/N), hi=Math.min(s1,bestS+(s1-s0)/N);
+  for(let it=0;it<24;it++){ const m1=lo+(hi-lo)/3, m2=hi-(hi-lo)/3;
+    const p1=ENG.getDeckPoint(m1,0), p2=ENG.getDeckPoint(m2,0);
+    const d1=(p1.x-wx)**2+(p1.y-wy)**2, d2=(p2.x-wx)**2+(p2.y-wy)**2;
+    if(d1<d2) hi=m2; else lo=m1; }
+  const sta=(lo+hi)/2;
+  const a=ENG.align.at(sta); const base=ENG.getDeckPoint(sta,0);
+  const nrm=a.brg+Math.PI/2; const off=(wx-base.x)*Math.sin(nrm)+(wy-base.y)*Math.cos(nrm);
+  const p=ENG.getDeckPoint(sta,off);
+  const box=document.getElementById('hovbox');
+  // only show if within the deck footprint at this station
+  const span=Math.max(1,Math.min(sortedUnits().length-1,spanOfSta(sta))); const ed=edgesForSpan(span);
+  const inFoot = sta>=s0-1e-6 && sta<=s1+1e-6 && off>=Math.min(ed.l,ed.r)-2 && off<=Math.max(ed.l,ed.r)+2;
+  if(inFoot){ box.style.display='block'; box.style.left=(evt.clientX+12)+'px'; box.style.top=(evt.clientY+12)+'px';
+    box.textContent=`sta ${formatStation(sta)}\noff ${off.toFixed(2)} ft\nz   ${p.z.toFixed(3)} ft`; }
+  else box.style.display='none';
+}
+
+/* ===== TABLE ===== */
+// assemble the station rows for a span: even divisions + both support CLs + any bearing lines
+function spanStationRows(s0, s1, divisions, bearingStas){
+  const set=new Set();
+  for(let j=0;j<=divisions;j++) set.add(+(s0+(s1-s0)*j/divisions).toFixed(4));
+  set.add(+s0.toFixed(4)); set.add(+s1.toFixed(4));
+  (bearingStas||[]).forEach(b=>{ if(b>=s0-1e-6 && b<=s1+1e-6) set.add(+b.toFixed(4)); });
+  return [...set].sort((a,b)=>a-b);
+}
+function buildTable(){
+  const mode=document.getElementById('rep_mode').value; const su=sortedUnits();
+  if(su.length<2){ document.getElementById('tbl_wrap').innerHTML='<p class="note">Define at least two substructure units to generate the output table.</p>'; return; }
+  const seat=false; // this tab is top-of-deck only
+  const zAt = (st,o)=> ENG.getDeckPoint(st,o).z;
+  let h='';
+  if(mode==='grid'){
+    const divisions=+document.getElementById('rep_div').value;
+    // all distinct bearing-line stations across the bridge (for marking rows)
+    const allBrg=[]; su.forEach(u=>bearingLinesFor(u).forEach(bl=>allBrg.push({sta:bl.sta,label:bl.label})));
+    h=`<table><thead><tr><th class="lbl">Span</th><th class="lbl">Station</th><th class="lbl" title="Marks rows that fall on a support centerline or bearing line.">Note</th>`+
+      `<th title="Top-of-deck elevation at the left edge of deck.">Edge L</th><th title="Top-of-deck elevation at the left curb line.">Curb L</th>`;
+    const gcols=ENG.globalGirders;
+    gcols.forEach((o,k)=>h+=`<th title="Top-of-deck elevation over girder ${k+1} (offset ${o} ft from baseline).">G${k+1}@${o}</th>`);
+    h+=`<th title="Top-of-deck elevation on the Profile Grade Line (alignment baseline, offset 0) \u2014 where the vertical profile is defined.">PGL</th><th title="Top-of-deck elevation at the bridge centerline (midpoint of the deck width, (edge L + edge R)/2). Differs from PGL when the deck is not symmetric about the baseline.">Bridge CL</th><th title="Top-of-deck elevation at the right curb line.">Curb R</th><th title="Top-of-deck elevation at the right edge of deck.">Edge R</th></tr></thead><tbody>`;
+    for(let i=0;i<su.length-1;i++){ const span=i+1, s0=su[i].sta, s1=su[i+1].sta;
+      const ed=edgesForSpan(span); const gs=girdersForSpan(span);
+      const brgInSpan=allBrg.filter(b=>b.sta>=s0-1e-6 && b.sta<=s1+1e-6).map(b=>b.sta);
+      const rows=spanStationRows(s0,s1,divisions,brgInSpan);
+      rows.forEach(sta=>{
+        // note column: identify support CLs and bearing lines
+        let note='';
+        const atUnit=su.find(u=>Math.abs(u.sta-sta)<1e-4);
+        if(atUnit) note=atUnit.name+' CL';
+        else { const b=allBrg.find(b=>Math.abs(b.sta-sta)<1e-4); if(b) note=b.label; }
+        const cl=curbAt(sta,'L'), cr=curbAt(sta,'R');
+        // edges, curbs, crown are deck points (no beam seat); girders use beam-seat with per-beam/span context
+        const zDeck=(o)=>ENG.getDeckPoint(sta,o).z;
+        const zGird=(o,bi)=> seat ? ENG.getBeamSeat(sta,o,{bi,span}).z : ENG.getDeckPoint(sta,o).z;
+        h+=`<tr${note?' style="background:rgba(27,110,120,.06)"':''}><td class="lbl">${span}</td><td class="lbl">${formatStation(sta)}</td><td class="lbl" style="color:var(--cyan);font-size:10px">${note}</td>`;
+        h+=`<td>${zDeck(ed.l).toFixed(3)}</td>`;
+        h+=`<td>${zDeck(cl).toFixed(3)}</td>`;
+        gs.forEach((o,bi)=>h+=`<td>${zGird(o,bi).toFixed(3)}</td>`);
+        h+=`<td>${zDeck(0).toFixed(3)}</td>`;
+        h+=`<td>${zDeck((ed.l+ed.r)/2).toFixed(3)}</td>`;
+        h+=`<td>${zDeck(cr).toFixed(3)}</td>`;
+        h+=`<td>${zDeck(ed.r).toFixed(3)}</td></tr>`;
+      });
+    }
+    h+=`</tbody></table><p class="note">${seat?'Beam-seat':'Top-of-deck'} elevations per span. Rows are the even divisions plus each support centerline and bearing line (highlighted). Curb offsets interpolate between supports; columns G1..Gn use the global girder set (per-span overrides apply when counts match).</p>`;
+  } else {
+    h='<table><thead><tr><th class="lbl">Line</th><th>Skew°</th><th>Edge L</th><th>Curb L</th>';
+    ENG.globalGirders.forEach((o,k)=>h+=`<th>G${k+1}@${o}</th>`);
+    h+='<th title="Top-of-deck on the Profile Grade Line (baseline, offset 0).">PGL</th><th title="Top-of-deck at the bridge centerline, (edge L + edge R)/2.">Bridge CL</th><th>Curb R</th><th>Edge R</th></tr></thead><tbody>';
+    su.forEach(u=>bearingLinesFor(u).forEach(bl=>{
+      // the span this bearing belongs to: a back bearing (sta<unit) is in the span ending here,
+      // an ahead bearing (sta>unit) is in the span starting here. Nudge into the interior.
+      const nudge = (bl.sta<u.sta)? -0.01 : (bl.sta>u.sta? 0.01 : 0);
+      const span=Math.max(1,Math.min(su.length-1,spanOfSta(bl.sta+nudge))); const ed=edgesForSpan(span);
+      const cl=curbAt(bl.sta,'L'), cr=curbAt(bl.sta,'R');
+      const zDeck=(o)=>ENG.getDeckPoint(staOnBearing(bl.sta,bl.skew,o),o).z;
+      const zGird=(o,bi)=>{ const st=staOnBearing(bl.sta,bl.skew,o); return seat?ENG.getBeamSeat(st,o,{bi,span}).z:ENG.getDeckPoint(st,o).z; };
+      h+=`<tr><td class="lbl">${bl.label}</td><td>${bl.skew.toFixed(1)}</td>`;
+      h+=`<td>${zDeck(ed.l).toFixed(3)}</td>`;
+      h+=`<td>${zDeck(cl).toFixed(3)}</td>`;
+      ENG.globalGirders.forEach((o,bi)=>{ h+=`<td>${zGird(o,bi).toFixed(3)}</td>`; });
+      h+=`<td>${zDeck(0).toFixed(3)}</td>`;
+      h+=`<td>${zDeck((ed.l+ed.r)/2).toFixed(3)}</td>`;
+      h+=`<td>${zDeck(cr).toFixed(3)}</td>`;
+      h+=`<td>${zDeck(ed.r).toFixed(3)}</td>`;
+      h+='</tr>'; }));
+    h+=`</tbody></table><p class="note">${seat?'Beam-seat':'Top-of-deck'} elevations at each bearing line, taken along the skewed support.</p>`;
+  }
+  document.getElementById('tbl_wrap').innerHTML=h;
+}
+
+/* ===== BEAM SEAT OUTPUT ===== */
+// the span a bearing line belongs to (back bearing -> span ending at unit; ahead -> span starting)
+function bearingSpan(u, bl, su){
+  const nudge = (bl.sta<u.sta)? -0.01 : (bl.sta>u.sta? 0.01 : 0);
+  return Math.max(1,Math.min(su.length-1,spanOfSta(bl.sta+nudge)));
+}
+// collect all bearing lines with their unit, span, skew, and per-girder seat data
+function seatData(){
+  const su=sortedUnits(); const out=[];
+  su.forEach(u=>bearingLinesFor(u).forEach(bl=>{
+    const span=bearingSpan(u,bl,su);
+    const gs=girdersForSpan(span);
+    const seats=gs.map((o,bi)=>{ const st=staOnBearing(bl.sta,bl.skew,o);
+      return { bi, off:o, sta:st, seatZ:ENG.getBeamSeat(st,o,{bi,span}).z, deckZ:ENG.getDeckPoint(st,o).z }; });
+    out.push({ unit:u, label:bl.label, sta:bl.sta, skew:bl.skew, span, seats });
+  }));
+  return out;
+}
+function buildSeatTable(){
+  const wrap=document.getElementById('seat_tbl_wrap'); if(!wrap) return;
+  const su=sortedUnits();
+  if(su.length<2){ wrap.innerHTML='<p class="note">Define at least two substructure units to generate beam seats.</p>'; return; }
+  const data=seatData();
+  const gcols=ENG.globalGirders;
+  let h='<table><thead><tr><th class="lbl" title="The bearing line: a support centerline, or back/ahead bearing at a dual-bearing pier.">Bearing line</th><th class="lbl" title="Station of this bearing line.">Station</th><th title="Skew of the support, degrees from the alignment normal.">Skew°</th><th class="lbl" title="The span this bearing belongs to (its camber/depth/bearing come from this span).">Span</th>';
+  gcols.forEach((o,k)=>h+=`<th title="Beam-seat elevation for girder ${k+1} (offset ${o} ft) at this bearing line.">G${k+1}@${o}</th>`);
+  h+='</tr></thead><tbody>';
+  data.forEach(r=>{
+    h+=`<tr><td class="lbl" style="color:var(--cyan)">${r.label}</td><td class="lbl">${formatStation(r.sta)}</td><td>${r.skew.toFixed(1)}</td><td class="lbl">${r.span}</td>`;
+    // map each global girder column to this span's seat (by index)
+    gcols.forEach((o,k)=>{ const s=r.seats[k]; h+=`<td>${s?s.seatZ.toFixed(3):'—'}</td>`; });
+    h+='</tr>';
+  });
+  h+='</tbody></table><p class="note">Beam-seat elevations at each bearing line. Columns G1..Gn use the global girder set; each value resolves camber/beam-depth/bearing for that girder in that bearing\u2019s span.</p>';
+  wrap.innerHTML=h;
+}
+// stacked cross-section per bearing line
+function buildSeatSections(){
+  const host=document.getElementById('seat_secs'); if(!host) return;
+  const su=sortedUnits();
+  if(su.length<2){ host.innerHTML=''; return; }
+  const data=seatData();
+  let html='';
+  data.forEach((r,idx)=>{
+    html+=`<div class="svgcard" style="margin-bottom:14px;">
+      <div class="cap"><span>${r.label}</span><span class="pill">${formatStation(r.sta)}</span>
+        <span class="note" style="text-transform:none;letter-spacing:0;">span ${r.span} · skew ${r.skew.toFixed(1)}°</span></div>
+      <svg id="seatsec_${idx}" viewBox="0 0 1200 300" preserveAspectRatio="xMidYMid meet"></svg></div>`;
+  });
+  host.innerHTML=html;
+  data.forEach((r,idx)=>drawSeatSection('seatsec_'+idx, r));
+}
+function drawSeatSection(svgId, r){
+  const svg=document.getElementById(svgId); if(!svg) return;
+  const vb=svg.viewBox.baseVal, W=vb.width, H=vb.height;
+  const padX=70, padTop=46, padBot=58;
+  const span=r.span; const ed=edgesForSpan(span);
+  const cl=curbAt(r.sta,'L'), cr=curbAt(r.sta,'R');
+  // transverse extent (offsets) and elevation extent
+  const offs=[ed.l,ed.r,cl,cr,...r.seats.map(s=>s.off)];
+  const minO=Math.min(...offs), maxO=Math.max(...offs);
+  // top of deck across the section (sample crown + edges)
+  const deckPts=[];
+  const NS=40; for(let i=0;i<=NS;i++){ const o=minO+(maxO-minO)*i/NS; const st=staOnBearing(r.sta,r.skew,o); deckPts.push([o, ENG.getDeckPoint(st,o).z]); }
+  const seatZs=r.seats.map(s=>s.seatZ);
+  const allZ=[...deckPts.map(p=>p[1]), ...seatZs];
+  const minZ=Math.min(...allZ), maxZ=Math.max(...allZ);
+  const capDepth=Math.max(0.8,(maxZ-minZ)*0.35); // nominal substructure depth
+  const loZ=minZ-capDepth-0.4, hiZ=maxZ+0.6;
+  const spanO=(maxO-minO)||1, spanZ=(hiZ-loZ)||1;
+  const TX=o=> padX + (o-minO)/spanO*(W-2*padX);
+  const TY=z=> H-padBot - (z-loZ)/spanZ*(H-padTop-padBot);
+  let s='';
+  // top-of-deck profile line
+  s+=`<path d="M${deckPts.map(p=>TX(p[0]).toFixed(1)+','+TY(p[1]).toFixed(1)).join(' L')}" fill="none" stroke="var(--ink)" stroke-width="2"/>`;
+  // substructure: stepped top following each girder seat, nominal depth below
+  // build seat offsets sorted by offset
+  const seatsSorted=r.seats.slice().sort((a,b)=>a.off-b.off);
+  if(seatsSorted.length){
+    const capBot=TY(loZ+0.3);
+    let d=`M${TX(minO).toFixed(1)},${capBot.toFixed(1)} `;
+    d+=`L${TX(minO).toFixed(1)},${TY(seatsSorted[0].seatZ).toFixed(1)} `;
+    // stepped top: each girder seat segment is level around the girder, stepping at midpoints
+    for(let i=0;i<seatsSorted.length;i++){ const o=seatsSorted[i].off, z=seatsSorted[i].seatZ;
+      const oL = i===0?minO:(seatsSorted[i-1].off+o)/2;
+      const oR = i===seatsSorted.length-1?maxO:(o+seatsSorted[i+1].off)/2;
+      d+=`L${TX(oL).toFixed(1)},${TY(z).toFixed(1)} L${TX(oR).toFixed(1)},${TY(z).toFixed(1)} `;
+    }
+    d+=`L${TX(maxO).toFixed(1)},${capBot.toFixed(1)} Z`;
+    s+=`<path d="${d}" fill="rgba(90,85,75,.18)" stroke="var(--graphite)" stroke-width="1.5"/>`;
+  }
+  // deck-edge lines (vertical dashed)
+  [['Edge L',ed.l],['Edge R',ed.r]].forEach(([lab,o])=>{
+    s+=`<line x1="${TX(o)}" y1="${TY(hiZ)}" x2="${TX(o)}" y2="${TY(loZ)}" stroke="var(--ink-soft)" stroke-width="1" stroke-dasharray="3 3"/>`;
+    s+=`<text x="${TX(o)}" y="${TY(hiZ)-4}" font-size="9" font-family="monospace" fill="var(--ink-soft)" text-anchor="middle">${lab}</text>`; });
+  // curb lines (vertical, cyan)
+  [['Curb L',cl],['Curb R',cr]].forEach(([lab,o])=>{
+    s+=`<line x1="${TX(o)}" y1="${TY(hiZ)}" x2="${TX(o)}" y2="${TY(loZ)}" stroke="var(--cyan)" stroke-width="1" stroke-dasharray="5 3"/>`;
+    s+=`<text x="${TX(o)}" y="${TY(hiZ)-4}" font-size="9" font-family="monospace" fill="var(--cyan)" text-anchor="middle">${lab}</text>`; });
+  // PGL (offset 0) and bridge CL (deck-width midpoint) markers
+  s+=`<line x1="${TX(0)}" y1="${TY(hiZ)}" x2="${TX(0)}" y2="${TY(loZ)}" stroke="var(--oxide)" stroke-width="0.75" stroke-dasharray="2 4"/>`;
+  s+=`<text x="${TX(0)}" y="${TY(loZ)+12}" font-size="8" font-family="monospace" fill="var(--oxide)" text-anchor="middle">PGL</text>`;
+  const clMid=(ed.l+ed.r)/2;
+  if(Math.abs(clMid)>1e-6){ s+=`<line x1="${TX(clMid)}" y1="${TY(hiZ)}" x2="${TX(clMid)}" y2="${TY(loZ)}" stroke="var(--ink-soft)" stroke-width="0.75" stroke-dasharray="2 4"/>`;
+    s+=`<text x="${TX(clMid)}" y="${TY(loZ)+12}" font-size="8" font-family="monospace" fill="var(--ink-soft)" text-anchor="middle">CL</text>`; }
+  // beam centerlines + seat callouts
+  r.seats.forEach((st,k)=>{
+    const x=TX(st.off), ySeat=TY(st.seatZ), yDeck=TY(st.deckZ);
+    s+=`<line x1="${x}" y1="${ySeat}" x2="${x}" y2="${yDeck}" stroke="var(--ink)" stroke-width="1.25"/>`;
+    s+=`<circle cx="${x}" cy="${ySeat}" r="3" fill="var(--oxide)"/>`;
+    s+=`<text x="${x}" y="${ySeat+16}" font-size="9" font-family="monospace" fill="var(--oxide)" text-anchor="middle" font-weight="bold">${st.seatZ.toFixed(3)}</text>`;
+    s+=`<text x="${x}" y="${yDeck-6}" font-size="8.5" font-family="monospace" fill="var(--ink-soft)" text-anchor="middle">G${st.bi+1}</text>`;
+  });
+  // elevation axis ticks
+  for(let i=0;i<=4;i++){ const z=loZ+(hiZ-loZ)*i/4; s+=`<text x="6" y="${TY(z)+3}" font-size="8.5" font-family="monospace" fill="var(--ink-soft)">${z.toFixed(2)}</text>`; }
+  svg.innerHTML=svgWrap(svgId, s, W, H);
+  attachSvgControls(svgId, W, H);
+}
+function buildSpanSummary(){
+  const su=sortedUnits();
+  let h='<table><thead><tr><th class="lbl">Span</th><th class="lbl">From</th><th class="lbl">To</th><th>Length</th></tr></thead><tbody>';
+  for(let i=0;i<su.length-1;i++) h+=`<tr><td class="lbl">${i+1}</td><td class="lbl">${su[i].name}</td><td class="lbl">${su[i+1].name}</td><td>${(su[i+1].sta-su[i].sta).toFixed(2)}</td></tr>`;
+  h+='</tbody></table>';
+  document.getElementById('span_wrap').innerHTML=h;
+}
+
+/* ===== VALIDATION ===== */
+// validation known points: {staStr, off, expZ}
+let VALPTS = [ {staStr:'0+00.00', off:0, expZ:100.000} ];
+function renderValTable(){
+  const t=document.getElementById('val_tbl'); if(!t) return;
+  let h='<thead><tr><th>#</th><th title="Station of the known point (NNN+NN.NN).">Station</th>'+
+        '<th title="Transverse offset from the alignment baseline (ft). Negative = left, positive = right.">Offset (ft)</th>'+
+        '<th title="The top-of-deck elevation you expect at this point (ft).">Expected elev</th><th></th></tr></thead><tbody>';
+  VALPTS.forEach((p,i)=>{
+    h+=`<tr>
+      <td class="lbl">${i+1}</td>
+      <td><input type="text" data-i="${i}" data-f="staStr" value="${p.staStr}" placeholder="100+00.00" style="width:96px"></td>
+      <td><input type="number" data-i="${i}" data-f="off" value="${p.off}" step="0.01" style="width:80px"></td>
+      <td><input type="number" data-i="${i}" data-f="expZ" value="${p.expZ}" step="0.001" style="width:96px"></td>
+      <td><button class="sm ghost" data-rm="${i}" title="Remove this point">✕</button></td>
+    </tr>`;
+  });
+  h+='</tbody>'; t.innerHTML=h;
+  t.querySelectorAll('input').forEach(el=>el.addEventListener('change',ev=>{
+    const i=+ev.target.dataset.i,f=ev.target.dataset.f;
+    VALPTS[i][f]= f==='staStr'? ev.target.value : (ev.target.value===''?0:+ev.target.value);
+  }));
+  t.querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',ev=>{ VALPTS.splice(+ev.target.dataset.rm,1); renderValTable(); }));
+}
+function runValidation(){
+  if(!ENG) compute();
+  const tol=+document.getElementById('val_tol').value;
+  let h='<table><thead><tr><th>Station</th><th>Offset</th><th>Expected z</th><th>Computed z</th><th>Δ</th><th>Status</th></tr></thead><tbody>'; let pass=0, n=0;
+  VALPTS.forEach(p=>{
+    const sta=parseStation(p.staStr); if(isNaN(sta)) {
+      h+=`<tr><td>${p.staStr}</td><td>${p.off}</td><td>${(+p.expZ).toFixed(3)}</td><td>—</td><td class="delta-bad">bad station</td><td class="delta-bad">—</td></tr>`; return; }
+    n++;
+    const z=ENG.getDeckPoint(sta,+p.off).z; const d=z-(+p.expZ); const ok=Math.abs(d)<=tol; if(ok)pass++;
+    h+=`<tr><td>${formatStation(sta)}</td><td>${(+p.off).toFixed(2)}</td><td>${(+p.expZ).toFixed(3)}</td><td>${z.toFixed(3)}</td><td class="${ok?'delta-good':'delta-bad'}">${d>=0?'+':''}${d.toFixed(4)}</td><td class="${ok?'delta-good':'delta-bad'}">${ok?'OK':'OUT'}</td></tr>`;
+  });
+  h+=`</tbody></table><p class="note">${pass}/${n} within ±${tol} ft.</p>`;
+  document.getElementById('val_wrap').innerHTML=h;
+}
+
+/* ===== ALIGNMENT / PVI / GIRDER TABLE UI ===== */
+// Zero out fields that don't apply to an element's type, so disabled cells read 0 not stale values.
+function normalizeElement(e){
+  if(e.type==='tan'){ e.R=0; e.Rin=0; e.Rout=0; e.deltaStr=''; e.curveMode='L'; }
+  else if(e.type==='crv'){ e.Rin=0; e.Rout=0; }
+  else if(e.type==='spi'){ e.R=0; e.deltaStr=''; e.curveMode='L'; }
+}
+// Walk the element chain from the POB, returning per-row begin/end station & bearing.
+// Mirrors the engine's chaining so the table can show data even before/independent of ENG.
+function alignmentRowData(){
+  const sta0=parseStation(document.getElementById('h_sta0').value);
+  const brg0=parseBearingToAzimuth(document.getElementById('h_brg0').value);
+  let sta=isNaN(sta0)?0:sta0, brg=(isNaN(brg0)?90:brg0)*DEG;
+  const rows=[];
+  ELEMS.forEach(e=>{
+    const L=(e.type==='crv')?curveLength(e):e.L;
+    const begSta=sta, begBrg=brg;
+    let endBrg=brg;
+    if(e.type==='crv'){ const sgn=Math.sign(e.R)||1, r=Math.abs(e.R); endBrg=brg+(sgn/r)*L; }
+    else if(e.type==='spi'){ const kin=e.Rin===0?0:1/e.Rin, kout=e.Rout===0?0:1/e.Rout; endBrg=brg+kin*L+(kout-kin)*L/2; }
+    // tangent: endBrg = begBrg
+    const endSta=begSta+L;
+    rows.push({ begSta, endSta, begBrg, endBrg, L });
+    sta=endSta; brg=endBrg;
+  });
+  return rows;
+}
+
+function renderElemTable(){
+  const t=document.getElementById('elem_tbl');
+  ELEMS.forEach(normalizeElement);   // ensure non-applicable fields read 0
+  const rd=alignmentRowData();
+  const warnings=[];
+  let h='<thead><tr><th>#</th><th title="Tangent (straight), Curve (circular arc), or Spiral (clothoid transition).">Type</th><th title="Station where this element begins (computed from the chain).">Begin Sta</th><th title="Station where this element ends. For a tangent you may type this to set its length; for curves/spirals it is computed from the geometry.">End Sta</th>'+
+        '<th title="Radius (ft) of a circular curve. Positive curves right, negative curves left.">R</th><th title="Spiral radius at its entry end (ft). Use a large/zero value for the tangent end.">R-in</th><th title="Spiral radius at its exit end (ft).">R-out</th><th title="How a curve is defined: by its length (L) or by its central/deflection angle (\u0394).">By</th><th title="Central deflection angle of the curve, in degrees-minutes-seconds (e.g. 14\u00b026\u201911\u2033). Used when \u2018By\u2019 = \u0394.">\u0394 (DMS)</th><th title="Arc length of the element (ft).">Length</th>'+
+        '<th title="Bearing of the alignment at the start of this element (azimuth and quadrant).">Brg Begin</th><th title="Bearing of the alignment at the end of this element.">Brg End</th><th></th></tr></thead><tbody>';
+  ELEMS.forEach((e,i)=>{
+    const isTan=e.type==='tan', isCrv=e.type==='crv', isSpi=e.type==='spi';
+    const byDelta = isCrv && e.curveMode==='delta';
+    const r=rd[i]||{begSta:0,endSta:0,begBrg:0,endBrg:0,L:0};
+    const Ldisp = byDelta ? curveLength(e).toFixed(2) : e.L;
+    // end-station editable for tangent (drives length); editable-with-check otherwise
+    const endStaVal = formatStation(r.endSta);
+    const azBeg=(((r.begBrg/DEG)%360)+360)%360, azEnd=(((r.endBrg/DEG)%360)+360)%360;
+    const begBrgStr = `${azBeg.toFixed(4)}°<br><span style="color:var(--ink-soft)">${azimuthToQuadrant(azBeg)}</span>`;
+    const endBrgStr = `${azEnd.toFixed(4)}°<br><span style="color:var(--ink-soft)">${azimuthToQuadrant(azEnd)}</span>`;
+    h+=`<tr>
+      <td class="lbl">${i+1}</td>
+      <td><select data-i="${i}" data-f="type">
+        <option value="tan"${isTan?' selected':''}>Tangent</option>
+        <option value="crv"${isCrv?' selected':''}>Curve</option>
+        <option value="spi"${isSpi?' selected':''}>Spiral</option></select></td>
+      <td class="lbl" style="color:var(--ink-soft)">${formatStation(r.begSta)}</td>
+      <td><input type="text" data-i="${i}" data-f="endSta" value="${endStaVal}" style="width:84px"></td>
+      <td><input type="number" data-i="${i}" data-f="R" value="${e.R}" step="1" style="width:64px"${isCrv?'':' disabled'}></td>
+      <td><input type="number" data-i="${i}" data-f="Rin" value="${e.Rin}" step="1" style="width:58px"${isSpi?'':' disabled'}></td>
+      <td><input type="number" data-i="${i}" data-f="Rout" value="${e.Rout}" step="1" style="width:58px"${isSpi?'':' disabled'}></td>
+      <td><select data-i="${i}" data-f="curveMode"${isCrv?'':' disabled'}>
+        <option value="L"${e.curveMode!=='delta'?' selected':''}>L</option>
+        <option value="delta"${e.curveMode==='delta'?' selected':''}>Δ</option></select></td>
+      <td><input type="text" data-i="${i}" data-f="deltaStr" value="${e.deltaStr||''}" placeholder="14°26'11&quot;" style="width:74px"${byDelta?'':' disabled'}></td>
+      <td><input type="${byDelta?'text':'number'}" data-i="${i}" data-f="L" value="${Ldisp}" step="1" style="width:66px"${byDelta?' disabled':''}></td>
+      <td class="lbl" style="font-size:10px">${begBrgStr}</td>
+      <td class="lbl" style="font-size:10px">${endBrgStr}</td>
+      <td style="white-space:nowrap">
+        <button class="sm ghost" data-up="${i}"${i===0?' disabled':''}>↑</button>
+        <button class="sm ghost" data-dn="${i}"${i===ELEMS.length-1?' disabled':''}>↓</button>
+        <button class="sm ghost" data-rm="${i}">✕</button></td>
+    </tr>`;
+  });
+  h+='</tbody>'; t.innerHTML=h;
+  const warnEl=document.getElementById('elem_warn'); if(warnEl) warnEl.textContent = warnings.join('  ');
+  t.querySelectorAll('input,select').forEach(el=>el.addEventListener('change',ev=>{
+    const i=+ev.target.dataset.i,f=ev.target.dataset.f; let v=ev.target.value;
+    if(f==='endSta'){ applyEndStation(i, v); renderElemTable(); if(ENG) compute(); return; }
+    if(f==='type'||f==='curveMode'||f==='deltaStr') ELEMS[i][f]=v; else ELEMS[i][f]=+v;
+    if(f==='type') normalizeElement(ELEMS[i]);
+    if(f==='type'||f==='curveMode'||f==='deltaStr'||f==='R') renderElemTable();
+    if(ENG) compute(); }));
+  t.querySelectorAll('[data-up]').forEach(b=>b.addEventListener('click',ev=>{ const i=+ev.target.dataset.up; [ELEMS[i-1],ELEMS[i]]=[ELEMS[i],ELEMS[i-1]]; renderElemTable(); if(ENG) compute(); }));
+  t.querySelectorAll('[data-dn]').forEach(b=>b.addEventListener('click',ev=>{ const i=+ev.target.dataset.dn; [ELEMS[i+1],ELEMS[i]]=[ELEMS[i],ELEMS[i+1]]; renderElemTable(); if(ENG) compute(); }));
+  t.querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',ev=>{ ELEMS.splice(+ev.target.dataset.rm,1); renderElemTable(); if(ENG) compute(); }));
+}
+
+// Apply an edited end-station to element i. For tangents, set length = end - begin.
+// For curve/spiral, compare to geometry-driven length and warn on conflict (engine keeps geometry value).
+function applyEndStation(i, str){
+  const v=parseStation(str); if(isNaN(v)) return;
+  const rd=alignmentRowData(); const r=rd[i]; if(!r) return;
+  const newL = v - r.begSta;
+  if(newL<=0){ document.getElementById('elem_warn').textContent=`Row ${i+1}: end station must be greater than begin station.`; return; }
+  const e=ELEMS[i];
+  if(e.type==='tan'){ e.L=newL; document.getElementById('elem_warn').textContent=''; return; }
+  // curve/spiral: geometry length is the source of truth; flag a conflict
+  const geomL = (e.type==='crv')?curveLength(e):e.L;
+  if(Math.abs(geomL-newL)>0.01){
+    document.getElementById('elem_warn').textContent =
+      `Row ${i+1}: typed end station ${formatStation(v)} implies length ${newL.toFixed(2)} ft, but geometry gives ${geomL.toFixed(2)} ft (R/Δ/L). Using geometry value.`;
+  } else { document.getElementById('elem_warn').textContent=''; }
+}
+// Per-PVI vertical-curve data: grades, A.D., K (both forms), BVC/EVC, high/low point.
+function pviCurveData(){
+  const P=PVIS.slice(); // assume already in station order as entered
+  const grades=[];
+  for(let i=0;i<P.length-1;i++) grades[i]=(P[i+1].elev-P[i].elev)/(P[i+1].sta-P[i].sta);
+  return P.map((p,i)=>{
+    const gIn = i>0 ? grades[i-1] : null;
+    const gOut = i<P.length-1 ? grades[i] : null;
+    const out={ gIn, gOut, AD:null, K_LA:null, K_dec:null, bvcSta:null, bvcEl:null, evcSta:null, evcEl:null, hlSta:null, hlEl:null, hlType:null };
+    if(i>0 && i<P.length-1 && p.L>0 && gIn!=null && gOut!=null){
+      const A=gOut-gIn;                 // algebraic difference (decimal)
+      out.AD=A;
+      out.K_LA = Math.abs(A)>1e-9 ? p.L/Math.abs(A*100) : null;   // L / A where A in percent
+      out.K_dec= Math.abs(A)>1e-9 ? p.L/Math.abs(A) : null;       // L / A where A is decimal grade diff
+      const bvc=p.sta-p.L/2, evc=p.sta+p.L/2;
+      const elevBVC=p.elev-gIn*(p.L/2), elevEVC=p.elev+gOut*(p.L/2);
+      out.bvcSta=bvc; out.bvcEl=elevBVC; out.evcSta=evc; out.evcEl=elevEVC;
+      // high/low point exists when grades have opposite sign
+      if(gIn*gOut<0){
+        const x=-gIn*p.L/(gOut-gIn);    // distance from BVC
+        if(x>=0 && x<=p.L){ out.hlSta=bvc+x; out.hlEl=elevBVC+gIn*x+(gOut-gIn)*x*x/(2*p.L);
+          out.hlType = (A>0)?'low':'high'; }
+      }
+    }
+    return out;
+  });
+}
+
+function renderVProfTable(){
+  const t=document.getElementById('vprof_tbl'); if(!t) return;
+  syncProfile();
+  const cd=pviCurveData();
+  const g=v=>v==null?'—':(v*100).toFixed(2)+'%';
+  const f2=v=>v==null?'—':v.toFixed(2);
+  const st=v=>v==null?'—':formatStation(v);
+  const warn=[];
+  let h='<thead><tr><th>#</th><th title="Start = first profile point. PVI = point of vertical intersection (a grade break). End = last profile point.">Point</th><th title="Station of this point (NNN+NN.NN).">Station</th><th title="Elevation of this point (ft).">Elevation</th><th title="Length of the vertical curve (ft) centered on this PVI. Blank/0 = a sharp grade break, no curve.">VC Len</th>'+
+        '<th title="Incoming grade into this point (%), computed from the previous point. Editable to override.">g in</th><th title="Outgoing grade from this point (%), computed to the next point. Editing it holds this point and moves the next point\u2019s elevation.">g out</th><th title="Algebraic difference of grades (g out \u2212 g in), in %. Drives the curvature.">A.D.</th><th title="K value = curve length per percent of grade change (L / |A.D.|). Higher K = flatter/longer curve.">K=L/A</th><th title="K expressed using the decimal grade difference (L / |A| where A is decimal).">K dec</th>'+
+        '<th title="Station of the BVC (begin vertical curve), where the curve leaves the incoming grade.">BVC sta</th><th title="Elevation at the BVC.">BVC el</th><th title="Station of the EVC (end vertical curve), where the curve meets the outgoing grade.">EVC sta</th><th title="Elevation at the EVC.">EVC el</th>'+
+        '<th title="Station and elevation of the high or low point of the curve, shown only when the grades reverse (a crest or sag).">Hi/Lo</th><th></th></tr></thead><tbody>';
+  VPIS.forEach((p,i)=>{
+    const isStart=(i===0), isEnd=(i===VPIS.length-1), isInterior=!isStart&&!isEnd;
+    const label = isStart?'Start':(isEnd?'End':`PVI ${i}`);
+    const c=cd[i]||{};
+    const gi=vGradeIn(i), go=vGradeOut(i);
+    // grade cells: editable where they exist (in for non-start, out for non-end)
+    const ginEdited = (VPIS[i] && VPIS[i]._ginOvr) ? ' edited' : '';
+    const goutEdited= (VPIS[i] && VPIS[i]._goutOvr) ? ' edited' : '';
+    const gInCell = (gi==null)?'—':`<input type="number" class="ovr${ginEdited}" data-i="${i}" data-f="gin" value="${(gi*100).toFixed(2)}" step="0.01" style="width:64px" title="Computed grade in — edit to override (recomputes previous point's elevation)">`;
+    const gOutCell= (go==null)?'—':`<input type="number" class="ovr${goutEdited}" data-i="${i}" data-f="gout" value="${(go*100).toFixed(2)}" step="0.01" style="width:64px" title="Computed grade out — edit to override (recomputes next point's elevation)">`;
+    // computed VC columns only meaningful on interior PVIs with a curve
+    const showCurve = isInterior && p.L>0;
+    const ad=showCurve?g(c.AD):'—', kla=showCurve?f2(c.K_LA):'—', kdec=showCurve?f2(c.K_dec):'—';
+    const bvcS=showCurve?st(c.bvcSta):'—', bvcE=showCurve?f2(c.bvcEl):'—';
+    const evcS=showCurve?st(c.evcSta):'—', evcE=showCurve?f2(c.evcEl):'—';
+    const hilo = (showCurve&&c.hlType)?`${st(c.hlSta)} ${f2(c.hlEl)} <span style="color:var(--ink-soft);font-size:9px">${c.hlType}</span>`:'—';
+    h+=`<tr>
+      <td class="lbl">${i+1}</td>
+      <td class="lbl" style="color:${isInterior?'var(--ink)':'var(--cyan)'}">${label}</td>
+      <td><input type="text" data-i="${i}" data-f="sta" value="${formatStation(p.sta)}" style="width:90px"></td>
+      <td><input type="number" data-i="${i}" data-f="elev" value="${p.elev}" step="0.01" style="width:80px"></td>
+      <td>${isInterior?`<input type="number" data-i="${i}" data-f="L" value="${p.L||''}" step="1" style="width:64px" placeholder="0">`:'<span class="lbl" style="color:var(--ink-soft)">—</span>'}</td>
+      <td class="lbl">${gInCell}</td>
+      <td class="lbl">${gOutCell}</td>
+      <td class="lbl" style="color:var(--ink-soft)">${ad}</td>
+      <td class="lbl" style="color:var(--ink-soft)">${kla}</td>
+      <td class="lbl" style="color:var(--ink-soft)">${kdec}</td>
+      <td class="lbl" style="color:var(--ink-soft)">${bvcS}</td>
+      <td class="lbl" style="color:var(--ink-soft)">${bvcE}</td>
+      <td class="lbl" style="color:var(--ink-soft)">${evcS}</td>
+      <td class="lbl" style="color:var(--ink-soft)">${evcE}</td>
+      <td class="lbl" style="color:var(--oxide)">${hilo}</td>
+      <td style="white-space:nowrap">
+        <button class="sm ghost" data-up="${i}"${i===0?' disabled':''}>↑</button>
+        <button class="sm ghost" data-dn="${i}"${i===VPIS.length-1?' disabled':''}>↓</button>
+        <button class="sm ghost" data-rm="${i}"${(isStart||isEnd)?' disabled':''}>✕</button></td>
+    </tr>`;
+  });
+  h+='</tbody>'; t.innerHTML=h;
+  // station-order sanity warning
+  for(let i=1;i<VPIS.length;i++){ if(VPIS[i].sta<=VPIS[i-1].sta){ warn.push(`Point ${i+1}: station must increase down the table.`); break; } }
+  // vertical-curve overlap check: each curve spans BVC..EVC; adjacent curves must not overlap
+  for(let i=1;i<VPIS.length-1;i++){ const ci=cd[i]; if(!ci||ci.bvcSta==null) continue;
+    for(let j=i+1;j<VPIS.length-1;j++){ const cj=cd[j]; if(!cj||cj.bvcSta==null) continue;
+      if(cj.bvcSta < ci.evcSta-1e-6){ warn.push(`PVI ${i} and PVI ${j} vertical curves overlap (EVC ${formatStation(ci.evcSta)} past BVC ${formatStation(cj.bvcSta)}).`); }
+      break; } }
+  const w=document.getElementById('vprof_warn'); if(w) w.textContent=warn.join('  ');
+  t.querySelectorAll('input').forEach(el=>el.addEventListener('change',ev=>{
+    const i=+ev.target.dataset.i,f=ev.target.dataset.f; let v=ev.target.value;
+    if(f==='sta'){ const pv=parseStation(v); VPIS[i].sta=isNaN(pv)?0:pv; }
+    else if(f==='elev'){ VPIS[i].elev = v===''?0:+v;
+      // a direct elevation edit re-establishes computed grades around this point
+      if(VPIS[i]){ VPIS[i]._ginOvr=false; VPIS[i]._goutOvr=false; }
+      if(VPIS[i-1]) VPIS[i-1]._goutOvr=false; if(VPIS[i+1]) VPIS[i+1]._ginOvr=false; }
+    else if(f==='L'){ VPIS[i].L = v===''?0:+v; }
+    else if(f==='gin'){ vSetGradeIn(i, v===''?0:+v); if(VPIS[i]) VPIS[i]._ginOvr=true; }
+    else if(f==='gout'){ vSetGradeOut(i, v===''?0:+v); if(VPIS[i]) VPIS[i]._goutOvr=true; }
+    renderVProfTable(); if(ENG) compute(); }));
+  t.querySelectorAll('[data-up]').forEach(b=>b.addEventListener('click',ev=>{ const i=+ev.target.dataset.up; if(i<=0)return; [VPIS[i-1],VPIS[i]]=[VPIS[i],VPIS[i-1]]; renderVProfTable(); if(ENG) compute(); }));
+  t.querySelectorAll('[data-dn]').forEach(b=>b.addEventListener('click',ev=>{ const i=+ev.target.dataset.dn; if(i>=VPIS.length-1)return; [VPIS[i+1],VPIS[i]]=[VPIS[i],VPIS[i+1]]; renderVProfTable(); if(ENG) compute(); }));
+  t.querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',ev=>{ const i=+ev.target.dataset.rm; if(i===0||i===VPIS.length-1)return; VPIS.splice(i,1); renderVProfTable(); if(ENG) compute(); }));
+}
+// kept as aliases so existing render-sequence calls still work
+function renderGradeTable(){ renderVProfTable(); }
+function renderPviTable(){ /* merged into renderVProfTable */ }
+function renderGirderTable(){
+  const t=document.getElementById('girder_tbl');
+  let h='<thead><tr><th>#</th><th>Offset (ft)</th><th></th></tr></thead><tbody>';
+  GIRDERS.forEach((o,i)=>{
+    h+=`<tr><td class="lbl">G${i+1}</td>
+      <td><input type="number" data-i="${i}" value="${o}" step="0.1" style="width:80px"></td>
+      <td><button class="sm ghost" data-rm="${i}">✕</button></td></tr>`;
+  });
+  h+='</tbody>'; t.innerHTML=h;
+  t.querySelectorAll('input').forEach(el=>el.addEventListener('change',ev=>{ GIRDERS[+ev.target.dataset.i]=+ev.target.value; renderSpanTable(); if(ENG) compute(); }));
+  t.querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',ev=>{ GIRDERS.splice(+ev.target.dataset.rm,1); renderGirderTable(); renderSpanTable(); if(ENG) compute(); }));
+}
+
+/* ===== PER-BEAM / PER-SPAN OVERRIDE GRID ===== */
+// Renders a beams×spans grid for the selected quantity (camber/beam/bearing).
+// Cell shows the resolved default in grey italic; a real per-beam-per-span value renders solid.
+function renderOvrGrid(){
+  const t=document.getElementById('ovr_grid'); if(!t) return;
+  const q=document.getElementById('ovr_which').value;
+  const nBeam=GIRDERS.length;
+  const su=sortedUnits(); const nSpan=Math.max(0,su.length-1);
+  if(nBeam===0 || nSpan===0){ t.innerHTML='<tbody><tr><td class="lbl">Define girders and spans first.</td></tr></tbody>'; return; }
+  const gdef=depthGlobal(q);
+  let h='<thead><tr><th>beam＼span</th>';
+  for(let s=1;s<=nSpan;s++) h+=`<th>Span ${s}</th>`;
+  h+='</tr></thead><tbody>';
+  for(let bi=0;bi<nBeam;bi++){
+    h+=`<tr><td class="lbl">G${bi+1}</td>`;
+    for(let s=1;s<=nSpan;s++){
+      const ks=bi+','+s;
+      const pbs=(PERBEAMSPAN[q]||{})[ks];
+      const hasPBS = pbs!=null && pbs!=='';
+      // the inherited default for placeholder display: per-beam, else global
+      const pb=(PERBEAM[q]||{})[bi];
+      const inherited = (pb!=null&&pb!=='')? +pb : gdef;
+      const val = hasPBS ? pbs : '';
+      h+=`<td><input type="number" class="ovr${hasPBS?' edited':''}" data-bi="${bi}" data-s="${s}" value="${val}" step="0.001" style="width:62px" placeholder="${(+inherited).toFixed(3)}" title="Default ${(+inherited).toFixed(3)} — type to override"></td>`;
+    }
+    h+='</tr>';
+  }
+  h+='</tbody>'; t.innerHTML=h;
+  t.querySelectorAll('input').forEach(el=>el.addEventListener('change',ev=>{
+    const bi=+ev.target.dataset.bi, s=+ev.target.dataset.s, v=ev.target.value;
+    if(!PERBEAMSPAN[q]) PERBEAMSPAN[q]={};
+    if(v==='') delete PERBEAMSPAN[q][bi+','+s]; else PERBEAMSPAN[q][bi+','+s]=+v;
+    renderOvrGrid(); if(ENG) compute();
+  }));
+}
+
+/* ===== SUBSTRUCTURE TABLE UI ===== */
+function renderSubTable(){
+  const t=document.getElementById('subtbl');
+  let h='<thead><tr><th></th><th class="lbl">Name</th><th title="Centerline station of this support (NNN+NN.NN).">Station</th><th title="Skew angle in degrees, measured from the alignment normal. 0 = support perpendicular to the alignment.">Skew°</th><th title="Single = one bearing line at the support station. Double = two bearing lines, back and ahead of the station (typical at piers).">Bearing</th><th title="For a double bearing, the distance (ft) each bearing line sits back/ahead of the support station.">Offset</th><th title="Left curb offset (ft from baseline) at this support; blank uses the global curb. Interpolated linearly between supports.">Curb L</th><th title="Right curb offset (ft from baseline) at this support; blank uses the global curb. Interpolated linearly between supports.">Curb R</th><th title="Optional cross-section override at this support (crown/super); blank uses the global cross-section.">X-sec</th><th title="Cross-slope rate for this support\u2019s override, as a decimal.">Rate</th></tr></thead><tbody>';
+  UNITS.forEach((u,i)=>{
+    h+=`<tr>
+      <td><span class="utag ${u.type}">${u.type}</span></td>
+      <td class="lbl"><input data-i="${i}" data-f="name" value="${u.name}" style="width:90px"></td>
+      <td><input type="text" data-i="${i}" data-f="sta" value="${formatStation(u.sta)}" style="width:84px"></td>
+      <td><input type="number" data-i="${i}" data-f="skew" value="${u.skew}" step="0.01" style="width:60px"></td>
+      <td><select data-i="${i}" data-f="bearMode"${u.type==='abut'?' disabled':''}>
+        <option value="single"${u.bearMode==='single'?' selected':''}>single</option>
+        <option value="double"${u.bearMode==='double'?' selected':''}>double</option></select></td>
+      <td><input type="number" data-i="${i}" data-f="bearOffset" value="${u.bearOffset}" step="0.01" style="width:60px"${u.bearMode==='double'?'':' disabled'}></td>
+      <td><input type="number" class="ovr" data-i="${i}" data-f="curbL" value="${u.curbL==null?'':u.curbL}" step="0.1" style="width:60px" placeholder="global" title="Left curb offset at this support (blank = global curb)"></td>
+      <td><input type="number" class="ovr" data-i="${i}" data-f="curbR" value="${u.curbR==null?'':u.curbR}" step="0.1" style="width:60px" placeholder="global" title="Right curb offset at this support (blank = global curb)"></td>
+      <td><select data-i="${i}" data-f="xMode">
+        <option value=""${u.xMode===''?' selected':''}>—</option>
+        <option value="crown"${u.xMode==='crown'?' selected':''}>crown</option>
+        <option value="super"${u.xMode==='super'?' selected':''}>super</option></select></td>
+      <td><input type="number" data-i="${i}" data-f="xRate" value="${u.xRate==null?'':u.xRate}" step="0.001" style="width:64px"${u.xMode===''?' disabled':''}></td>
+    </tr>`;
+  });
+  h+='</tbody>'; t.innerHTML=h;
+  t.querySelectorAll('input,select').forEach(el=>el.addEventListener('change',e=>{
+    const i=+e.target.dataset.i,f=e.target.dataset.f; let v=e.target.value;
+    if(f==='xRate'){ u_set(i,f, v===''?null:+v); }
+    else if(f==='curbL'||f==='curbR'){ u_set(i,f, v===''?null:+v); }
+    else if(f==='sta'){ const sv=parseStation(v); u_set(i,f, isNaN(sv)?0:sv); renderSubTable(); }
+    else if(['skew','bearOffset'].includes(f)){ u_set(i,f,+v); }
+    else { u_set(i,f,v); }
+    if(f==='bearMode'||f==='xMode') renderSubTable();
+    if(ENG) compute();
+  }));
+}
+function u_set(i,f,v){ UNITS[i][f]=v; }
+
+function renderSpanTable(){
+  const su=sortedUnits(); const nSpan=Math.max(0,su.length-1); const t=document.getElementById('spantbl');
+  if(nSpan<1){ t.innerHTML='<tbody><tr><td class="lbl">Generate spans first.</td></tr></tbody>'; return; }
+  // current global values, shown as the inherited default in each cell
+  const gGird=GIRDERS.join(', ');
+  const gEdgeL=document.getElementById('edge_l').value, gEdgeR=document.getElementById('edge_r').value;
+  let h='<thead><tr>'+
+    '<th class="lbl" title="Span number and the two supports it runs between.">Span</th>'+
+    `<th title="Override the girder layout for this span only. Enter offsets (ft from baseline) as a comma-separated list, e.g. -18, -6, 6, 18. Blank = use the global set (${gGird}).">Girder offsets (ft) &mdash; blank uses global</th>`+
+    '<th title="Override the left deck-edge offset (ft from baseline) for this span. Blank = global.">Edge L</th>'+
+    '<th title="Override the right deck-edge offset (ft from baseline) for this span. Blank = global.">Edge R</th>'+
+    '<th title="Number of girders in effect for this span (override if set, otherwise global)."># Gird</th>'+
+    '</tr></thead><tbody>';
+  for(let s=1;s<=nSpan;s++){ const ov=SPAN_OV[s]||{};
+    const fromN=su[s-1]?su[s-1].name:''; const toN=su[s]?su[s].name:'';
+    const gOver = ov.girders!=null;
+    const nGird = ov.girders!=null ? ov.girders.length : GIRDERS.length;
+    h+=`<tr>
+      <td class="lbl">${s}<div style="font-size:9px;color:var(--ink-soft);">${fromN} \u2192 ${toN}</div></td>
+      <td><input class="ovr${gOver?' edited':''}" data-s="${s}" data-f="girders" value="${ov.girders?ov.girders.join(', '):''}" placeholder="${gGird}" style="width:180px" title="Comma-separated girder offsets for this span. Blank inherits the global set."></td>
+      <td><input type="number" class="ovr${ov.edgeL!=null?' edited':''}" data-s="${s}" data-f="edgeL" value="${ov.edgeL!=null?ov.edgeL:''}" placeholder="${gEdgeL}" step="0.1" style="width:74px"></td>
+      <td><input type="number" class="ovr${ov.edgeR!=null?' edited':''}" data-s="${s}" data-f="edgeR" value="${ov.edgeR!=null?ov.edgeR:''}" placeholder="${gEdgeR}" step="0.1" style="width:74px"></td>
+      <td class="lbl" style="text-align:center;color:${gOver?'var(--oxide)':'var(--ink-soft)'}">${nGird}</td>
+    </tr>`; }
+  h+='</tbody>'; t.innerHTML=h;
+  t.querySelectorAll('input').forEach(el=>el.addEventListener('change',e=>{
+    const s=+e.target.dataset.s,f=e.target.dataset.f,v=e.target.value; if(!SPAN_OV[s])SPAN_OV[s]={};
+    if(f==='girders') SPAN_OV[s].girders = v.trim()? v.split(',').map(x=>+x.trim()).filter(x=>!isNaN(x)) : null;
+    else SPAN_OV[s][f] = v===''?null:+v;
+    renderSpanTable(); if(ENG) compute();
+  }));
+}
+
+/* ===== 3D (Three.js) ===== */
+let R3 = { align:null, sub:null };
+function makeScene(canvas){
+  if(typeof THREE==='undefined') return null;
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,preserveDrawingBuffer:true});
+  renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+  renderer.setClearColor(0xF6F3EA,1);
+  const scene=new THREE.Scene();
+  const cam=new THREE.PerspectiveCamera(45, canvas.clientWidth/canvas.clientHeight, 0.1, 100000);
+  scene.add(new THREE.AmbientLight(0xffffff,0.8));
+  const dl=new THREE.DirectionalLight(0xffffff,0.5); dl.position.set(1,2,1); scene.add(dl);
+  return {renderer,scene,cam,canvas, theta:0.6, phi:0.9, rad:1, target:new THREE.Vector3()};
+}
+function orbit(ctx){ if(!ctx) return; const {cam,target,rad,theta,phi}=ctx;
+  cam.position.set( target.x+rad*Math.sin(phi)*Math.cos(theta), target.y+rad*Math.cos(phi), target.z+rad*Math.sin(phi)*Math.sin(theta) );
+  cam.lookAt(target); ctx.renderer.render(ctx.scene,cam); }
+function attachOrbitControls(ctx){ if(!ctx) return; const cv=ctx.canvas; let drag=false,lx,ly;
+  cv.onmousedown=e=>{drag=true;lx=e.clientX;ly=e.clientY;};
+  window.addEventListener('mouseup',()=>drag=false);
+  cv.onmousemove=e=>{ if(!drag)return; ctx.theta+=(e.clientX-lx)*0.01; ctx.phi=Math.max(0.15,Math.min(Math.PI-0.15,ctx.phi-(e.clientY-ly)*0.01)); lx=e.clientX;ly=e.clientY; orbit(ctx); };
+  cv.onwheel=e=>{ e.preventDefault(); ctx._userZoomed=true; ctx.rad*=(1+Math.sign(e.deltaY)*0.1); orbit(ctx); };
+}
+function clearScene(ctx){ if(!ctx)return; for(let i=ctx.scene.children.length-1;i>=0;i--){ const o=ctx.scene.children[i]; if(o.isLight)continue; ctx.scene.remove(o);} }
+// Build a polyline from arrays of [x,y,z] in world (we map: world X=plan x, world Z=plan y, world Y=elev*exag)
+function lineFrom(points, colorHex, exag, ctr){
+  const g=new THREE.BufferGeometry(); const arr=[];
+  points.forEach(p=>{ arr.push(p[0]-ctr.x, (p[2]-ctr.z)*exag, p[1]-ctr.y); });
+  g.setAttribute('position', new THREE.Float32BufferAttribute(arr,3));
+  return new THREE.Line(g, new THREE.LineBasicMaterial({color:colorHex}));
+}
+// deck surface as a triangulated mesh between deck edges, sampled along stations
+function deckSurfaceMesh(exag, ctr){
+  const su=sortedUnits(); if(su.length<2) return null;
+  const NL=80, NW=8; // along, across
+  const s0=ENG.align.staStart, s1=ENG.align.staEnd;
+  const verts=[], idx=[]; const cols=[];
+  const zs=[];
+  for(let i=0;i<=NL;i++){ const st=s0+(s1-s0)*i/NL; const span=Math.max(1,Math.min(su.length-1,spanOfSta(st))); const ed=edgesForSpan(span);
+    for(let j=0;j<=NW;j++){ const off=ed.l+(ed.r-ed.l)*j/NW; const p=ENG.getDeckPoint(st,off);
+      verts.push(p.x-ctr.x,(p.z-ctr.z)*exag,p.y-ctr.y); zs.push(p.z); } }
+  const minZ=Math.min(...zs),maxZ=Math.max(...zs);
+  for(let i=0;i<verts.length;i+=3){ const t=(maxZ-minZ<1e-9)?0.5:((zs[i/3]-minZ)/(maxZ-minZ));
+    cols.push(0.16+t*0.78, 0.35+(1-Math.abs(t-0.5)*2)*0.35, 0.62-t*0.47); }
+  const rw=NW+1;
+  for(let i=0;i<NL;i++){ for(let j=0;j<NW;j++){ const a=i*rw+j, b=a+1, c=a+rw, d=c+1;
+    idx.push(a,c,b, b,c,d); } }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(verts,3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(cols,3));
+  g.setIndex(idx); g.computeVertexNormals();
+  return new THREE.Mesh(g, new THREE.MeshBasicMaterial({vertexColors:true, side:THREE.DoubleSide, transparent:true, opacity:0.92}));
+}
+function alignPolyline(){ const s0=ENG.align.staStart,s1=ENG.align.staEnd,n=200,pts=[];
+  for(let i=0;i<=n;i++){ const s=s0+(s1-s0)*i/n; const p=ENG.getDeckPoint(s,0); pts.push([p.x,p.y,p.z]); } return pts; }
+function worldCenter(allPts){ let mnx=Infinity,mxx=-Infinity,mny=Infinity,mxy=-Infinity,mnz=Infinity,mxz=-Infinity;
+  allPts.forEach(p=>{mnx=Math.min(mnx,p[0]);mxx=Math.max(mxx,p[0]);mny=Math.min(mny,p[1]);mxy=Math.max(mxy,p[1]);mnz=Math.min(mnz,p[2]);mxz=Math.max(mxz,p[2]);});
+  return { x:(mnx+mxx)/2, y:(mny+mxy)/2, z:(mnz+mxz)/2, span:Math.max(mxx-mnx,mxy-mny,1) }; }
+
+function render3DAlign(){
+  const cv=document.getElementById('three_align'); if(!cv) return;
+  if(cv.clientWidth<1 || cv.clientHeight<1) return; // hidden/unlaid-out; will render on tab show
+  if(!R3.align){ R3.align=makeScene(cv); attachOrbitControls(R3.align); }
+  const ctx=R3.align; if(!ctx){ cv.style.display='none'; return; }
+  clearScene(ctx);
+  const apts=alignPolyline(); const su=sortedUnits();
+  const exag=8;
+  // gather all points for centering/scaling
+  let allp=apts.slice();
+  const s0=ENG.align.staStart,s1=ENG.align.staEnd;
+  // girder lines
+  const gLines=ENG.globalGirders.map(off=>{ const ln=[]; for(let i=0;i<=120;i++){ const st=s0+(s1-s0)*i/120; const p=ENG.getDeckPoint(st,off); ln.push([p.x,p.y,p.z]); allp.push([p.x,p.y,p.z]); } return ln; });
+  // substructure support lines (skewed) + downward "columns" to suggest piers
+  const supLines=[];
+  su.forEach(u=>bearingLinesFor(u).forEach(bl=>{ const span=Math.max(1,Math.min(su.length-1,spanOfSta(bl.sta))); const ed=edgesForSpan(span); const line=[];
+    for(let w=0;w<=12;w++){ const off=ed.l+(ed.r-ed.l)*w/12; const st=staOnBearing(bl.sta,bl.skew,off); const p=ENG.getDeckPoint(st,off); line.push([p.x,p.y,p.z]); allp.push([p.x,p.y,p.z]); }
+    supLines.push({line, pier:u.type==='pier'}); }));
+  const c=worldCenter(allp); const ctr={x:c.x,y:c.y,z:c.z};
+  // deck surface mesh
+  const mesh=deckSurfaceMesh(exag,ctr); if(mesh) ctx.scene.add(mesh);
+  // centerline (dark) on top of surface
+  ctx.scene.add(lineFrom(apts,0x1C1A17,exag,ctr));
+  // girders
+  gLines.forEach(ln=>ctx.scene.add(lineFrom(ln,0x5A554B,exag,ctr)));
+  // substructure
+  supLines.forEach(sl=>ctx.scene.add(lineFrom(sl.line, sl.pier?0x1B6E78:0x9C3B22, exag, ctr)));
+  ctx.target.set(0,0,0); ctx.baseRad=c.span*1.4; if(!ctx._userZoomed) ctx.rad=ctx.baseRad; orbit(ctx);
+}
+// a vertical "box" dropping from the deck edge-to-edge line down a nominal depth (pier/abutment)
+function pierMesh(bl, span, depth, exag, ctr, colorHex){
+  const ed=edgesForSpan(span); const NW=8;
+  const top=[], bot=[];
+  for(let w=0;w<=NW;w++){ const off=ed.l+(ed.r-ed.l)*w/NW; const st=staOnBearing(bl.sta,bl.skew,off); const p=ENG.getDeckPoint(st,off);
+    top.push([p.x,p.y,p.z]); bot.push([p.x,p.y,p.z-depth]); }
+  const verts=[], idx=[];
+  const push=(p)=>{ verts.push(p[0]-ctr.x,(p[2]-ctr.z)*exag,p[1]-ctr.y); return verts.length/3-1; };
+  const tIdx=top.map(push), bIdx=bot.map(push);
+  // front face (the skewed wall)
+  for(let w=0;w<NW;w++){ const a=tIdx[w],b=tIdx[w+1],c=bIdx[w],d=bIdx[w+1]; idx.push(a,c,b, b,c,d); }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(verts,3));
+  g.setIndex(idx); g.computeVertexNormals();
+  return new THREE.Mesh(g, new THREE.MeshBasicMaterial({color:colorHex, side:THREE.DoubleSide, transparent:true, opacity:0.45}));
+}
+// beam-seat line across a bearing line (stepped to each girder seat)
+function seatLine(bl, span, exag, ctr){
+  const offs=girdersForSpan(span); const pts=[];
+  offs.forEach((o,bi)=>{ const st=staOnBearing(bl.sta,bl.skew,o); const z=ENG.getBeamSeat(st,o,{bi,span}).z; const p=ENG.getDeckPoint(st,o); pts.push([p.x,p.y,z]); });
+  return pts;
+}
+// text label as a camera-facing sprite
+// slider pos 0..100 -> exaggeration, with 50 = 1x (true scale), exponential each side
+function exagFromSlider(){
+  const el=document.getElementById('l3_exag'); const pos=el?+el.value:50;
+  return Math.pow(30, (pos-50)/50); // pos0 -> 1/30, pos50 -> 1, pos100 -> 30
+}
+function makeLabel(text, world, exag, ctr, opts){
+  opts=opts||{};
+  const cv=document.createElement('canvas'); const ctx2=cv.getContext('2d');
+  const fs=44; ctx2.font=`bold ${fs}px monospace`; const w=ctx2.measureText(text).width;
+  cv.width=w+24; cv.height=fs+18; ctx2.font=`bold ${fs}px monospace`;
+  ctx2.fillStyle=opts.bg||'rgba(246,243,234,0.92)';
+  // rounded-ish bg
+  ctx2.fillRect(0,0,cv.width,cv.height);
+  ctx2.fillStyle=opts.color||'#1C1A17'; ctx2.textBaseline='middle'; ctx2.fillText(text,12,cv.height/2);
+  const tex=new THREE.CanvasTexture(cv); tex.needsUpdate=true;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthTest:false}));
+  const lift=(opts.lift!=null?opts.lift:0);
+  sp.position.set(world[0]-ctr.x,(world[2]-ctr.z)*exag+lift,world[1]-ctr.y);
+  const base=(worldCenterCache?worldCenterCache.span:200);
+  const sc=(opts.scale!=null?opts.scale:0.018)*base; sp.scale.set(sc*cv.width/cv.height, sc, 1);
+  return sp;
+}
+let worldCenterCache=null;
+function groundPlane(c, exag, ctr, depth){
+  const size=c.span*1.6;
+  const g=new THREE.PlaneGeometry(size,size);
+  const m=new THREE.MeshBasicMaterial({color:0xE8E2D2, transparent:true, opacity:0.5, side:THREE.DoubleSide});
+  const mesh=new THREE.Mesh(g,m);
+  mesh.rotation.x=-Math.PI/2;
+  mesh.position.set(0,(c.z-depth-ctr.z)*exag,0);
+  return mesh;
+}
+function render3DSub(){
+  const cv=document.getElementById('three_sub'); if(!cv) return;
+  if(cv.clientWidth<1 || cv.clientHeight<1) return; // hidden/unlaid-out; will render on tab show
+  if(!R3.sub){ R3.sub=makeScene(cv); attachOrbitControls(R3.sub); }
+  const ctx=R3.sub; if(!ctx){ cv.style.display='none'; return; }
+  clearScene(ctx);
+  const LY=id=>{ const el=document.getElementById(id); return el?el.checked:true; };
+  const exag=exagFromSlider();
+  const apts=alignPolyline(); const su=sortedUnits();
+  const s0=ENG.align.staStart,s1=ENG.align.staEnd;
+  let allp=apts.slice();
+  // girder lines (longitudinal)
+  const gLines=ENG.globalGirders.map(off=>{ const ln=[]; for(let i=0;i<=120;i++){ const st=s0+(s1-s0)*i/120; const p=ENG.getDeckPoint(st,off); ln.push([p.x,p.y,p.z]); allp.push([p.x,p.y,p.z]); } return ln; });
+  // bearing lines with their span
+  const brgs=[]; su.forEach(u=>bearingLinesFor(u).forEach(bl=>{ const nudge=(bl.sta<u.sta)?-0.01:(bl.sta>u.sta?0.01:0); const span=Math.max(1,Math.min(su.length-1,spanOfSta(bl.sta+nudge)));
+    const ed=edgesForSpan(span); const line=[]; for(let w=0;w<=12;w++){ const off=ed.l+(ed.r-ed.l)*w/12; const st=staOnBearing(bl.sta,bl.skew,off); const p=ENG.getDeckPoint(st,off); line.push([p.x,p.y,p.z]); allp.push([p.x,p.y,p.z]); }
+    brgs.push({bl,u,span,line}); }));
+  const c=worldCenter(allp); const ctr={x:c.x,y:c.y,z:c.z}; worldCenterCache=c;
+  const pierDepth=Math.max(4, c.span*0.04); // nominal substructure depth
+  // ---- layers ----
+  if(LY('l3_ground')) ctx.scene.add(groundPlane(c,exag,ctr,pierDepth*2));
+  if(LY('l3_deck')){ const mesh=deckSurfaceMesh(exag,ctr); if(mesh) ctx.scene.add(mesh); }
+  if(LY('l3_cl')) ctx.scene.add(lineFrom(apts,0x1C1A17,exag,ctr));
+  if(LY('l3_gird')) gLines.forEach(ln=>ctx.scene.add(lineFrom(ln,0x5A554B,exag,ctr)));
+  if(LY('l3_seat')) brgs.forEach(b=>ctx.scene.add(lineFrom(seatLine(b.bl,b.span,exag,ctr),0x9C3B22,exag,ctr)));
+  if(LY('l3_pier')) brgs.forEach(b=>ctx.scene.add(pierMesh(b.bl,b.span,pierDepth,exag,ctr, b.u.type==='pier'?0x1B6E78:0x5A554B)));
+  // support lines always (thin) so the skew reads
+  brgs.forEach(b=>ctx.scene.add(lineFrom(b.line, b.u.type==='pier'?0x1B6E78:0x9C3B22, exag, ctr)));
+  if(LY('l3_lbl')){ const seen=new Set(); const lift=c.span*0.06;
+    su.forEach(u=>{ if(seen.has(u.name))return; seen.add(u.name);
+      const p=ENG.getDeckPoint(u.sta,0);
+      // leader line from deck up to the label
+      const leadG=new THREE.BufferGeometry();
+      leadG.setAttribute('position', new THREE.Float32BufferAttribute([
+        p.x-ctr.x,(p.z-ctr.z)*exag,p.y-ctr.y,
+        p.x-ctr.x,(p.z-ctr.z)*exag+lift,p.y-ctr.y],3));
+      ctx.scene.add(new THREE.Line(leadG, new THREE.LineBasicMaterial({color:0xBDB6A4})));
+      ctx.scene.add(makeLabel(u.name,[p.x,p.y,p.z],exag,ctr,{lift, scale:0.013, color:u.type==='pier'?'#1B6E78':'#9C3B22'}));
+    }); }
+  ctx.target.set(0,0,0); ctx.baseRad=c.span*1.4; if(!ctx._userZoomed) ctx.rad=ctx.baseRad; orbit(ctx);
+}
+
+/* ===== 3D camera presets / fit ===== */
+function cam3DPreset(which, key){
+  const ctx = key==='align' ? R3.align : R3.sub; if(!ctx) return;
+  if(which==='plan'){ ctx.phi=0.0001; ctx.theta=0; }            // top-down
+  else if(which==='elev'){ ctx.phi=Math.PI/2; ctx.theta=Math.PI/2; } // side elevation
+  else if(which==='iso'){ ctx.phi=0.9; ctx.theta=0.6; }         // isometric
+  orbit(ctx);
+}
+function cam3DFit(key){
+  const ctx = key==='align' ? R3.align : R3.sub; if(!ctx) return;
+  ctx._userZoomed=false; if(ctx.baseRad) ctx.rad=ctx.baseRad; orbit(ctx);
+}
+
+/* ===== VALIDATION SET ===== */
+function loadValidationSet(){
+  const set={h_sta0:'0+00.00',h_x0:0,h_y0:0,h_brg0:'N90E'};
+  for(const k in set) document.getElementById(k).value=set[k];
+  ELEMS=[{type:'tan',L:1000,R:800,Rin:0,Rout:800,curveMode:'L',deltaStr:''}];
+  VPIS=[{sta:0,elev:100.00,L:0},{sta:1000,elev:110.00,L:0}]; // constant +1% -> 100 to 110
+  GIRDERS=[-10,0,10];
+  document.getElementById('x_mode_global').value='super'; document.getElementById('x_rate_global').value='0.02';
+  document.getElementById('x_pivot').value='0';
+  document.getElementById('edge_l').value='-12'; document.getElementById('edge_r').value='12';
+  document.getElementById('nspans').value='1'; seedSpans(1);
+  const su=sortedUnits(); su[0].sta=0; su[su.length-1].sta=1000;
+  UNITS.forEach(u=>{ u.skew=0; u.xMode=''; u.xRate=null; });
+  renderElemTable(); renderVProfTable(); renderGirderTable(); renderSubTable(); renderSpanTable(); renderOvrGrid(); renderValTable();
+  VALPTS=[{staStr:'0+00.00',off:0,expZ:100.000},{staStr:'5+00.00',off:10,expZ:105.200},
+          {staStr:'10+00.00',off:-10,expZ:109.800},{staStr:'2+50.00',off:10,expZ:102.700}];
+  renderValTable();
+  compute(); runValidation();
+}
+
+/* ===== WIRING ===== */
+document.querySelectorAll('.tabbtn').forEach(btn=>btn.addEventListener('click',()=>{
+  document.querySelectorAll('.tabbtn').forEach(b=>b.setAttribute('aria-selected','false'));
+  document.querySelectorAll('.tabpane').forEach(p=>p.classList.remove('active'));
+  btn.setAttribute('aria-selected','true'); document.getElementById('pane-'+btn.dataset.tab).classList.add('active');
+  if(ENG){
+    // wait for the now-visible pane to lay out, then resize renderers to real dimensions
+    // and FULLY re-render the 3D scenes (they may have been built at 0x0 while hidden).
+    setTimeout(()=>{
+      [R3.align,R3.sub].forEach(c=>{ if(c && c.canvas.clientWidth>0 && c.canvas.clientHeight>0){
+        c.renderer.setSize(c.canvas.clientWidth,c.canvas.clientHeight,false);
+        c.cam.aspect=c.canvas.clientWidth/c.canvas.clientHeight; c.cam.updateProjectionMatrix(); } });
+      render3DAlign(); render3DSub(); drawHeatmap(); buildSeatSections();
+    },40);
+  }
+}));
+document.getElementById('run').addEventListener('click',compute);
+document.getElementById('run2').addEventListener('click',compute);
+document.getElementById('sec_sta_slider').addEventListener('input',e=>{ if(ENG) setActiveSta(+e.target.value,true); });
+document.getElementById('sec_sta_in').addEventListener('change',e=>{ if(!ENG)return; const v=parseStation(e.target.value); if(!isNaN(v)) setActiveSta(v,true); });
+['l3_deck','l3_cl','l3_gird','l3_seat','l3_pier','l3_lbl','l3_ground'].forEach(id=>
+  document.getElementById(id).addEventListener('change',()=>{ if(ENG) render3DSub(); }));
+document.getElementById('l3_exag').addEventListener('input',e=>{ const v=exagFromSlider(); document.getElementById('l3_exag_val').textContent=(v>=10?v.toFixed(0):v.toFixed(1))+'\u00d7'; if(ENG) render3DSub(); });
+document.getElementById('loadval').addEventListener('click',loadValidationSet);
+document.getElementById('val_run').addEventListener('click',runValidation);
+document.getElementById('val_add').addEventListener('click',()=>{ VALPTS.push({staStr:'0+00.00',off:0,expZ:0}); renderValTable(); });
+document.getElementById('gen_spans').addEventListener('click',()=>{ seedSpans(Math.max(1,+document.getElementById('nspans').value)); renderSubTable(); renderSpanTable(); compute(); });
+['rep_mode','rep_div'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{ if(ENG) buildTable(); }));
+document.getElementById('divs').addEventListener('change',()=>{ if(ENG) drawHeatmap(); });
+let _heatResizeT=null;
+window.addEventListener('resize',()=>{ clearTimeout(_heatResizeT); _heatResizeT=setTimeout(()=>{ if(ENG) drawHeatmap(); },120); });
+['ly_fill','ly_align','ly_gird','ly_edge','ly_sub','ly_brg','ly_sta','ly_gpt','ly_elev'].forEach(id=>{
+  const el=document.getElementById(id); if(el) el.addEventListener('change',()=>{ if(ENG) drawHeatmap(); }); });
+['x_mode_global','x_rate_global','x_pivot','edge_l','edge_r','curb_l','curb_r','d_slab','d_haunch','d_beam','d_bearing','d_camber'].forEach(id=>
+  document.getElementById(id).addEventListener('change',()=>{ renderOvrGrid(); renderSpanTable(); if(ENG) compute(); }));
+document.getElementById('ovr_toggle').addEventListener('click',()=>{
+  const p=document.getElementById('ovr_panel'); const open=p.style.display!=='none';
+  p.style.display=open?'none':'block';
+  document.getElementById('ovr_toggle').textContent=(open?'▸':'▾')+' Per-beam / per-span overrides';
+  if(!open) renderOvrGrid();
+});
+document.getElementById('ovr_which').addEventListener('change',renderOvrGrid);
+document.getElementById('elem_add').addEventListener('click',()=>{ ELEMS.push({type:'tan',L:100,R:800,Rin:0,Rout:800,curveMode:'L',deltaStr:''}); renderElemTable(); if(ENG) compute(); });
+document.getElementById('vpvi_add').addEventListener('click',()=>{
+  // insert a new PVI just before the End row, at a station between the last two points
+  const n=VPIS.length; const a=VPIS[n-2], b=VPIS[n-1];
+  const sta=a&&b?Math.round((a.sta+b.sta)/2):(b?b.sta+100:100);
+  const elev=a&&b?(a.elev+b.elev)/2:(b?b.elev:100);
+  VPIS.splice(n-1,0,{sta,elev,L:0}); renderVProfTable(); if(ENG) compute(); });
+document.getElementById('girder_add').addEventListener('click',()=>{ GIRDERS.push(0); renderGirderTable(); renderSpanTable(); if(ENG) compute(); });
+document.getElementById('svg_prof_a').addEventListener('click',evt=>{ if(!ENG)return;
+  const svg=evt.currentTarget; if(svg._didPan && svg._didPan()) return;
+  const vb=svg.viewBox.baseVal, W=vb.width, pad=44;
+  const r=svg.getBoundingClientRect();
+  const screenX=(evt.clientX-r.left)/r.width*W;
+  const v=svgView('svg_prof_a'); const vx=(screenX-v.Px)/v.Z;
+  const s0=ENG.align.staStart,s1=ENG.align.staEnd;
+  ACTIVE_STA=Math.max(s0,Math.min(s1,s0+(vx-pad)/(W-2*pad)*(s1-s0))); drawPlan('svg_plan_a'); drawProfile('svg_prof_a'); drawSection(); syncSectionControls(); });
+
+// Rich hover: PLAN -> sta / N,E / bearing ; PROFILE -> sta / elev / grade
+function showHov(evt, lines){ const box=document.getElementById('hovbox');
+  box.style.display='block'; box.style.left=(evt.clientX+12)+'px'; box.style.top=(evt.clientY+12)+'px';
+  box.textContent=lines.join('\n'); }
+function hideHov(){ document.getElementById('hovbox').style.display='none'; }
+
+document.getElementById('svg_plan_a').addEventListener('mousemove',evt=>{
+  if(!ENG||!PLANVIEWXF) return; const svg=evt.currentTarget; if(svg._didPan&&svg._didPan())return;
+  const vb=svg.viewBox.baseVal,W=vb.width,H=vb.height; const r=svg.getBoundingClientRect();
+  const sxScreen=(evt.clientX-r.left)/r.width*W, syScreen=(evt.clientY-r.top)/r.height*H;
+  const v=svgView('svg_plan_a'); const sx=(sxScreen-v.Px)/v.Z, sy=(syScreen-v.Py)/v.Z;
+  const X=PLANVIEWXF; const wx=X.minX+(sx-X.ox)/X.sc, wy=X.minY+(X.H-sy-X.oy)/X.sc;
+  // nearest station on the centerline by sampling
+  let bestS=X.s0,bd=Infinity; const n=200;
+  for(let i=0;i<=n;i++){ const st=X.s0+(X.s1-X.s0)*i/n; const p=ENG.getDeckPoint(st,0); const d=(p.x-wx)**2+(p.y-wy)**2; if(d<bd){bd=d;bestS=st;} }
+  const a=ENG.align.at(bestS); const p=ENG.getDeckPoint(bestS,0);
+  // signed offset from alignment at that station
+  const nrm=a.brg+Math.PI/2; const off=(wx-p.x)*Math.sin(nrm)+(wy-p.y)*Math.cos(nrm);
+  const az=((a.brg/DEG)%360+360)%360;
+  showHov(evt,[`sta  ${formatStation(bestS)}`,`off  ${off.toFixed(2)} ft`,`N    ${p.y.toFixed(3)}`,`E    ${p.x.toFixed(3)}`,`brg  ${azimuthToQuadrant(az)}`]);
+});
+document.getElementById('svg_plan_a').addEventListener('mouseleave',hideHov);
+
+document.getElementById('svg_prof_a').addEventListener('mousemove',evt=>{
+  if(!ENG||!PROFVIEWXF) return; const svg=evt.currentTarget; if(svg._didPan&&svg._didPan())return;
+  const vb=svg.viewBox.baseVal,W=vb.width; const r=svg.getBoundingClientRect();
+  const sxScreen=(evt.clientX-r.left)/r.width*W;
+  const v=svgView('svg_prof_a'); const sx=(sxScreen-v.Px)/v.Z;
+  const X=PROFVIEWXF; const st=X.s0+(sx-X.pad)/(X.W-2*X.pad)*(X.s1-X.s0);
+  if(st<X.s0||st>X.s1){ hideHov(); return; }
+  const z=ENG.prof.elevAt(st);
+  // local grade
+  const ds=1; const g=(ENG.prof.elevAt(Math.min(X.s1,st+ds))-ENG.prof.elevAt(Math.max(X.s0,st-ds)))/(2*ds);
+  showHov(evt,[`sta   ${formatStation(st)}`,`elev  ${z.toFixed(3)} ft`,`grade ${(g*100).toFixed(2)}%`]);
+});
+document.getElementById('svg_prof_a').addEventListener('mouseleave',hideHov);
+
+const heatCv=document.getElementById('heat');
+heatCv.addEventListener('mousemove',heatHover);
+heatCv.addEventListener('mouseleave',()=>document.getElementById('hovbox').style.display='none');
+// heatmap pan/zoom
+(function(){ let drag=false,lx=0,ly=0;
+  function evXY(e){ const r=heatCv.getBoundingClientRect(); return {x:(e.clientX-r.left)*(heatCv.width/r.width)/(HEAT?HEAT.dpr:1), y:(e.clientY-r.top)*(heatCv.height/r.height)/(HEAT?HEAT.dpr:1)}; }
+  heatCv.addEventListener('wheel',e=>{ e.preventDefault(); const p=evXY(e); const f=e.deltaY<0?1.12:1/1.12;
+    const sx=(p.x-HEATVIEW.Px)/HEATVIEW.Z, sy=(p.y-HEATVIEW.Py)/HEATVIEW.Z;
+    HEATVIEW.Z*=f; HEATVIEW.Px=p.x-sx*HEATVIEW.Z; HEATVIEW.Py=p.y-sy*HEATVIEW.Z; if(ENG) drawHeatmap(); },{passive:false});
+  heatCv.addEventListener('mousedown',e=>{ if(e.shiftKey||e.button===1){ drag=true; const p=evXY(e); lx=p.x; ly=p.y; e.preventDefault(); } });
+  window.addEventListener('mouseup',()=>drag=false);
+  heatCv.addEventListener('mousemove',e=>{ if(!drag)return; const p=evXY(e); HEATVIEW.Px+=(p.x-lx); HEATVIEW.Py+=(p.y-ly); lx=p.x; ly=p.y; if(ENG) drawHeatmap(); });
+})();
+
+/* ===== GRAPHIC CONTROL BARS ===== */
+document.addEventListener('click', e=>{
+  const btn=e.target.closest('.gctrl button'); if(!btn) return;
+  const bar=btn.closest('.gctrl');
+  // SVG views
+  if(bar.dataset.svg){ const id=bar.dataset.svg;
+    const W = id==='svg_plan_a'?900 : id==='svg_prof_a'?900 : 900;
+    const H = id==='svg_plan_a'?320 : id==='svg_prof_a'?200 : 240;
+    if(btn.hasAttribute('data-zin'))  svgZoomAt(id, W/2, H/2, 1.2);
+    if(btn.hasAttribute('data-zout')) svgZoomAt(id, W/2, H/2, 1/1.2);
+    if(btn.hasAttribute('data-reset')) svgResetView(id);
+    if(btn.hasAttribute('data-svgexp')) exportSVG(id);
+  }
+  // heatmap
+  if(bar.hasAttribute('data-heat')){
+    const cv=document.getElementById('heat'); const dpr=HEAT?HEAT.dpr:1; const cx=cv.width/2/dpr, cy=cv.height/2/dpr;
+    if(btn.hasAttribute('data-zin')||btn.hasAttribute('data-zout')){ const f=btn.hasAttribute('data-zin')?1.2:1/1.2;
+      const sx=(cx-HEATVIEW.Px)/HEATVIEW.Z, sy=(cy-HEATVIEW.Py)/HEATVIEW.Z;
+      HEATVIEW.Z*=f; HEATVIEW.Px=cx-sx*HEATVIEW.Z; HEATVIEW.Py=cy-sy*HEATVIEW.Z; if(ENG) drawHeatmap(); }
+    if(btn.hasAttribute('data-reset')){ HEATVIEW={Z:1,Px:0,Py:0}; if(ENG) drawHeatmap(); }
+    if(btn.hasAttribute('data-pngexp')) exportCanvasPNG('heat','deck-plan');
+  }
+  // 3D views
+  if(bar.dataset.three){ const key=bar.dataset.three;
+    if(btn.hasAttribute('data-plan')) cam3DPreset('plan', key);
+    if(btn.hasAttribute('data-elev')) cam3DPreset('elev', key);
+    if(btn.hasAttribute('data-iso'))  cam3DPreset('iso', key);
+    if(btn.hasAttribute('data-fit'))  cam3DFit(key);
+    if(btn.hasAttribute('data-pngexp')) exportCanvasPNG(key==='align'?'three_align':'three_sub', key==='align'?'3d-alignment':'3d-substructure');
+  }
+});
+
+/* ===== PERSISTENCE ===== */
+const STORAGE_KEY = 'bridgeGeomEngine.project.v1';
+const LIBRARY_KEY = 'bridgeGeomEngine.library.v1';
+let CURRENT_NAME = null; // name of the loaded library entry, if any
+const SCALAR_IDS = ['h_sta0','h_x0','h_y0','h_brg0','nspans','x_mode_global','x_rate_global',
+  'x_pivot','edge_l','edge_r','curb_l','curb_r','d_slab','d_haunch','d_beam','d_bearing','d_camber','divs','rep_mode','rep_div','val_tol'];
+
+function serializeProject(){
+  const scalars={}; SCALAR_IDS.forEach(id=>{ const el=document.getElementById(id); if(el) scalars[id]= el.type==='checkbox'?el.checked:el.value; });
+  return { version:1, savedAt:new Date().toISOString(),
+    ELEMS, GIRDERS, UNITS, SPAN_OV, VPIS, PERBEAM, PERBEAMSPAN, VALPTS, scalars, activeSta:ACTIVE_STA };
+}
+function applyProject(p){
+  if(!p || p.version!==1) return false;
+  ELEMS.length=0; (p.ELEMS||[]).forEach(e=>ELEMS.push(e));
+  GIRDERS.length=0; (p.GIRDERS||[]).forEach(e=>GIRDERS.push(e));
+  PERBEAM = p.PERBEAM || {camber:{},beam:{},bearing:{}};
+  PERBEAMSPAN = p.PERBEAMSPAN || {camber:{},beam:{},bearing:{}};
+  if(p.VALPTS){ VALPTS.length=0; p.VALPTS.forEach(v=>VALPTS.push(v)); }
+  ['camber','beam','bearing'].forEach(q=>{ if(!PERBEAM[q])PERBEAM[q]={}; if(!PERBEAMSPAN[q])PERBEAMSPAN[q]={}; });
+  UNITS.length=0; (p.UNITS||[]).forEach(e=>UNITS.push(e));
+  for(const k in SPAN_OV) delete SPAN_OV[k];
+  if(p.SPAN_OV) for(const k in p.SPAN_OV) SPAN_OV[k]=p.SPAN_OV[k];
+  // vertical profile grade model
+  // vertical profile single-table model (with backward-compat for older grade-based saves)
+  // vertical profile point model (with backward-compat for older formats)
+  if(p.VPIS){ VPIS.length=0; p.VPIS.forEach(r=>VPIS.push(r)); }
+  else if(p.VPROF){ // convert old row model: begin + grade/vc rows -> points
+    VPIS.length=0; let cur=null;
+    p.VPROF.forEach((r,k)=>{ if(r.type==='begin'){ cur={sta:r.sta,elev:r.elev,L:0}; VPIS.push(cur); }
+      else if(r.type==='grade'){ const e=cur.elev+(r.grade/100)*(r.endSta-cur.sta); cur={sta:r.endSta,elev:e,L:0}; VPIS.push(cur); }
+      else if(r.type==='vc' && VPIS.length>=1){ VPIS[VPIS.length-1].L=r.L; } }); }
+  else if(p.VBEGIN && p.VROWS){ VPIS.length=0; let cur={sta:p.VBEGIN.sta,elev:p.VBEGIN.elev,L:0}; VPIS.push(cur);
+    p.VROWS.forEach(r=>{ const e=cur.elev+(r.grade/100)*(r.endSta-cur.sta); cur={sta:r.endSta,elev:e,L:r.vc||0}; VPIS.push(cur); });
+    if(VPIS.length) VPIS[VPIS.length-1].L=0; }
+  if(p.scalars) for(const id in p.scalars){ const el=document.getElementById(id); if(el){ if(el.type==='checkbox') el.checked=!!p.scalars[id]; else el.value=p.scalars[id]; } }
+  ACTIVE_STA = (typeof p.activeSta==='number') ? p.activeSta : null;
+  renderElemTable(); renderVProfTable(); renderGirderTable(); renderSubTable(); renderSpanTable(); renderOvrGrid(); renderValTable();
+  compute();
+  return true;
+}
+
+let _saveTimer=null, _storageOK=true;
+function setStatus(msg){ const el=document.getElementById('save_status'); if(el) el.textContent=msg; }
+function autosave(){
+  if(!_storageOK) return;
+  clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(()=>{
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeProject()));
+      const t=new Date(); setStatus('autosaved '+t.toLocaleTimeString());
+    } catch(e){
+      _storageOK=false;
+      setStatus('autosave unavailable here — use Save project');
+    }
+  }, 600);
+}
+function restoreOnOpen(){
+  let raw=null;
+  try { raw=localStorage.getItem(STORAGE_KEY); }
+  catch(e){ _storageOK=false; setStatus('browser storage blocked — use Save/Load project'); return false; }
+  if(!raw){ setStatus('no saved session'); return false; }
+  try {
+    const p=JSON.parse(raw);
+    if(applyProject(p)){ CURRENT_NAME=p.name||null; updateNameDisplay(); setStatus('restored last session'); return true; }
+  } catch(e){ setStatus('saved session unreadable'); }
+  return false;
+}
+
+function downloadProject(){
+  const blob=new Blob([JSON.stringify(serializeProject(),null,2)], {type:'application/json'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  const stamp=new Date().toISOString().slice(0,10);
+  a.href=url; a.download=`bridge-project-${stamp}.json`; document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  setStatus('saved to file');
+}
+function loadProjectFromFile(file){
+  const reader=new FileReader();
+  reader.onload=()=>{ try { const p=JSON.parse(reader.result);
+      if(applyProject(p)){ CURRENT_NAME=p.name||null; setStatus('loaded '+file.name); updateNameDisplay(); autosave(); }
+      else setStatus('not a valid project file'); }
+    catch(e){ setStatus('could not read file'); } };
+  reader.readAsText(file);
+}
+
+/* ===== NAMED BRIDGE LIBRARY (localStorage) ===== */
+function libRead(){ try { const r=localStorage.getItem(LIBRARY_KEY); return r?JSON.parse(r):{}; } catch(e){ return {}; } }
+function libWrite(lib){ try { localStorage.setItem(LIBRARY_KEY, JSON.stringify(lib)); return true; } catch(e){ setStatus('storage unavailable — use Export JSON'); return false; } }
+function updateNameDisplay(){ const el=document.getElementById('cur_name'); if(el) el.textContent=CURRENT_NAME||'(unsaved)'; }
+function libSave(name){
+  if(!name) return false;
+  const lib=libRead(); const proj=serializeProject(); proj.name=name;
+  lib[name]=proj; if(!libWrite(lib)) return false;
+  CURRENT_NAME=name; updateNameDisplay(); renderLibrary(); setStatus('saved \u201c'+name+'\u201d to library'); return true;
+}
+function libLoad(name){
+  const lib=libRead(); const p=lib[name]; if(!p){ setStatus('not found'); return; }
+  if(applyProject(p)){ CURRENT_NAME=name; updateNameDisplay(); renderLibrary(); setStatus('loaded \u201c'+name+'\u201d'); autosave(); }
+}
+function libDelete(name){
+  const lib=libRead(); if(!(name in lib)) return;
+  delete lib[name]; libWrite(lib);
+  if(CURRENT_NAME===name){ CURRENT_NAME=null; updateNameDisplay(); }
+  renderLibrary(); setStatus('deleted \u201c'+name+'\u201d');
+}
+function libRename(oldName,newName){
+  if(!newName || oldName===newName) return;
+  const lib=libRead(); if(!(oldName in lib)) return;
+  if(lib[newName] && !confirm('\u201c'+newName+'\u201d exists. Overwrite it?')) return;
+  lib[newName]=lib[oldName]; lib[newName].name=newName; delete lib[oldName]; libWrite(lib);
+  if(CURRENT_NAME===oldName) CURRENT_NAME=newName;
+  updateNameDisplay(); renderLibrary(); setStatus('renamed to \u201c'+newName+'\u201d');
+}
+function doSave(){ // Save: update current entry if named, else prompt
+  if(CURRENT_NAME){ libSave(CURRENT_NAME); }
+  else doSaveAs();
+}
+function doSaveAs(){
+  const name=prompt('Save bridge as:', CURRENT_NAME||'Bridge '+ (Object.keys(libRead()).length+1));
+  if(name && name.trim()){ const t=name.trim(); const lib=libRead();
+    if(lib[t] && t!==CURRENT_NAME && !confirm('\u201c'+t+'\u201d exists. Overwrite it?')) return;
+    libSave(t); }
+}
+function renderLibrary(){
+  const host=document.getElementById('lib_list'); if(!host) return;
+  const lib=libRead(); const names=Object.keys(lib).sort((a,b)=>a.localeCompare(b));
+  if(names.length===0){ host.innerHTML='<p class="note" style="margin:6px 0;">No saved bridges yet. Use <strong>Save As</strong> to add one.</p>'; return; }
+  let h='<table class="subtbl"><thead><tr><th class="lbl">Bridge</th><th>Saved</th><th></th></tr></thead><tbody>';
+  names.forEach(n=>{ const p=lib[n]; const when=p.savedAt?new Date(p.savedAt).toLocaleString():'';
+    const isCur = n===CURRENT_NAME;
+    h+=`<tr${isCur?' style="background:rgba(27,110,120,.08)"':''}>
+      <td class="lbl">${isCur?'\u25b8 ':''}${n}</td>
+      <td class="lbl" style="font-size:10px;color:var(--ink-soft);">${when}</td>
+      <td style="white-space:nowrap;">
+        <button class="sm" data-lib-load="${encodeURIComponent(n)}">Load</button>
+        <button class="sm ghost" data-lib-ren="${encodeURIComponent(n)}">Rename</button>
+        <button class="sm ghost" data-lib-del="${encodeURIComponent(n)}">Delete</button>
+      </td></tr>`; });
+  h+='</tbody></table>'; host.innerHTML=h;
+  host.querySelectorAll('[data-lib-load]').forEach(b=>b.addEventListener('click',()=>libLoad(decodeURIComponent(b.dataset.libLoad))));
+  host.querySelectorAll('[data-lib-del]').forEach(b=>b.addEventListener('click',()=>{ const n=decodeURIComponent(b.dataset.libDel); if(confirm('Delete \u201c'+n+'\u201d? This cannot be undone.')) libDelete(n); }));
+  host.querySelectorAll('[data-lib-ren]').forEach(b=>b.addEventListener('click',()=>{ const n=decodeURIComponent(b.dataset.libRen); const nn=prompt('Rename bridge:',n); if(nn&&nn.trim()) libRename(n,nn.trim()); }));
+}
+
+// hook autosave onto every change/click that mutates state
+function armAutosave(){
+  document.addEventListener('change', autosave, true);
+  document.addEventListener('click', e=>{ if(e.target.closest('button')) setTimeout(autosave,50); }, true);
+}
+
+/* ===== INIT ===== */
+function freshDefaults(){
+  // the demo bridge (only used when there's nothing to restore and user hits New/reset)
+  ELEMS.length=0; [{type:'tan',L:200},{type:'spi',L:150,Rin:0,Rout:800},{type:'crv',R:800,L:300},
+    {type:'spi',L:150,Rin:800,Rout:0},{type:'tan',L:200}].forEach(e=>ELEMS.push(e));
+  VPIS.length=0; [{sta:0,elev:100.00,L:0},{sta:400,elev:108.00,L:300},{sta:900,elev:104.00,L:0}].forEach(r=>VPIS.push(r));
+  GIRDERS.length=0; [-18,-6,6,18].forEach(g=>GIRDERS.push(g));
+  seedSpans(2);
+  ENG=buildEngine();
+  const su=sortedUnits(); su[0].sta=0; su[1].sta=500; su[2].sta=1000;
+  if(UNITS[1]) UNITS[1].skew=15;
+  ACTIVE_STA=null;
+  renderElemTable(); renderVProfTable(); renderGirderTable(); renderSubTable(); renderSpanTable(); renderOvrGrid(); renderValTable();
+  compute();
+}
+
+// wiring for persistence buttons
+document.getElementById('proj_save').addEventListener('click', downloadProject);
+document.getElementById('proj_load').addEventListener('click', ()=>document.getElementById('proj_file').click());
+document.getElementById('proj_file').addEventListener('change', e=>{ if(e.target.files[0]) loadProjectFromFile(e.target.files[0]); });
+document.getElementById('proj_new').addEventListener('click', ()=>{ if(confirm('Reset to the demo bridge? Unsaved changes will be lost.')){ freshDefaults(); CURRENT_NAME=null; updateNameDisplay(); autosave(); } });
+document.getElementById('proj_savelib').addEventListener('click', doSave);
+document.getElementById('proj_saveas').addEventListener('click', doSaveAs);
+document.getElementById('lib_saveas').addEventListener('click', doSaveAs);
+document.getElementById('lib_refresh').addEventListener('click', renderLibrary);
+document.getElementById('lib_toggle').addEventListener('click', ()=>{
+  const p=document.getElementById('lib_panel'); const open=p.style.display!=='none';
+  p.style.display=open?'none':'block';
+  document.getElementById('lib_toggle').textContent=(open?'\u25b8':'\u25be')+' Bridge Library';
+  if(!open) renderLibrary();
+});
+
+// boot: build engine once so renders have something, then try restore; fall back to defaults
+seedSpans(2);
+ENG=buildEngine();
+(function(){ const su=sortedUnits(); if(su[0])su[0].sta=0; if(su[1])su[1].sta=500; if(su[2])su[2].sta=1000; if(UNITS[1]) UNITS[1].skew=15; })();
+renderElemTable(); renderVProfTable(); renderGirderTable(); renderSubTable(); renderSpanTable(); renderOvrGrid(); renderValTable();
+compute();
+if(!restoreOnOpen()){ /* keep the demo bridge already built above */ }
+updateNameDisplay(); renderLibrary();
+armAutosave();
+</script>
+</body>
+</html>

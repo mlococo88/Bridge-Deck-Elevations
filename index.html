@@ -2214,7 +2214,14 @@ function loadProjectFromFile(file){
 /* ===== NAMED BRIDGE LIBRARY (localStorage) ===== */
 function libRead(){ try { const r=localStorage.getItem(LIBRARY_KEY); return r?JSON.parse(r):{}; } catch(e){ return {}; } }
 function libWrite(lib){ try { localStorage.setItem(LIBRARY_KEY, JSON.stringify(lib)); return true; } catch(e){ setStatus('storage unavailable — use Export JSON'); return false; } }
-function updateNameDisplay(){ const el=document.getElementById('cur_name'); if(el) el.textContent=CURRENT_NAME||'(unsaved)'; }
+function updateNameDisplay(){
+  const el=document.getElementById('cur_name'); if(el) el.textContent=CURRENT_NAME||'(unsaved)';
+  const btn=document.getElementById('proj_savelib');
+  if(btn){
+    if(CURRENT_NAME){ btn.textContent='Save (updates \u201c'+CURRENT_NAME+'\u201d)'; btn.title='Overwrite the loaded bridge \u201c'+CURRENT_NAME+'\u201d in the library with the current state.'; }
+    else { btn.textContent='Save As\u2026'; btn.title='No bridge is loaded yet \u2014 this will prompt for a name and add it to the library.'; }
+  }
+}
 function libSave(name){
   if(!name) return false;
   const lib=libRead(); const proj=serializeProject(); proj.name=name;
@@ -2239,8 +2246,10 @@ function libRename(oldName,newName){
   if(CURRENT_NAME===oldName) CURRENT_NAME=newName;
   updateNameDisplay(); renderLibrary(); setStatus('renamed to \u201c'+newName+'\u201d');
 }
-function doSave(){ // Save: update current entry if named, else prompt
-  if(CURRENT_NAME){ libSave(CURRENT_NAME); }
+function doSave(){ // Save: overwrite current entry if one is loaded, else prompt for a name
+  if(CURRENT_NAME){
+    if(confirm('Update \u201c'+CURRENT_NAME+'\u201d in the library with the current bridge? This overwrites the saved version.')) libSave(CURRENT_NAME);
+  }
   else doSaveAs();
 }
 function doSaveAs(){

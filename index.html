@@ -206,26 +206,27 @@
             <div><label>Rate (decimal)</label><input type="number" id="x_rate_global" value="0.02" step="0.001" title="Cross slope as a decimal (0.02 = 2%). For crown, the fall on each side; for super, the planar grade across the deck."></div>
           </div>
           <div class="row2">
-            <div><label>Crown / pivot offset</label><input type="number" id="x_pivot" value="0" step="0.1" title="Transverse offset (ft from baseline) of the crown line (crown mode) or the pivot/axis-of-rotation (super mode). 0 = on the alignment baseline."></div>
-            <div></div>
+            <div><label>Crown offset (from PGL)</label><input type="number" id="crown_off" value="0" step="0.1" title="Transverse offset (ft) of the crown high point measured from the PGL. 0 = crown on the PGL. The deck equals the profile elevation at the PGL (offset 0) and falls away from the crown."></div>
+            <div><label>Bridge CL offset (from PGL)</label><input type="number" id="bcl_off" value="0" step="0.1" title="Transverse offset (ft) of the bridge centerline measured from the PGL. A reported reference line; does not affect deck geometry."></div>
           </div>
-          <p class="note">Per-unit overrides set in the table below. Rate interpolates linearly between control points; crown = falls both sides, super = planar grade across.</p>
+          <input type="hidden" id="x_pivot" value="0">
+          <p class="note">The <strong>PGL = baseline = reference line</strong>, fixed at offset 0 — the deck elevation equals the vertical profile elevation here. The <strong>crown</strong> (deck high point) and <strong>bridge CL</strong> are each entered as offsets from the PGL; enter 0 for either to place it on the PGL. Per-unit cross-slope overrides set in the table below.</p>
         </fieldset>
 
         <h2 class="sec">Girders &amp; Deck Edges</h2>
         <fieldset>
-          <legend>global girder offsets (ft from baseline)</legend>
+          <legend>global girder offsets (ft from the Bridge CL)</legend>
           <div style="overflow-x:auto;"><table class="subtbl" id="girder_tbl"></table></div>
           <button class="sm ghost" id="girder_add" style="margin:8px 0;">+ Girder</button>
           <div class="row2">
-            <div><label>Deck edge LEFT (offset)</label><input type="number" id="edge_l" value="-24" step="0.1" title="Transverse offset (ft from baseline) of the left deck edge. Negative = left of the alignment."></div>
-            <div><label>Deck edge RIGHT (offset)</label><input type="number" id="edge_r" value="24" step="0.1" title="Transverse offset (ft from baseline) of the right deck edge. Positive = right of the alignment."></div>
+            <div><label>Deck edge LEFT (offset)</label><input type="number" id="edge_l" value="-24" step="0.1" title="Transverse offset (ft from the Bridge CL) of the left deck edge. Negative = left of the Bridge CL."></div>
+            <div><label>Deck edge RIGHT (offset)</label><input type="number" id="edge_r" value="24" step="0.1" title="Transverse offset (ft from the Bridge CL) of the right deck edge. Positive = right of the Bridge CL."></div>
           </div>
           <div class="row2">
-            <div><label>Curb LEFT (offset)</label><input type="number" id="curb_l" value="-21" step="0.1" placeholder="opt" title="Transverse offset (ft from baseline) of the left curb line. Used for curb elevations in the output. Can be overridden per support in the substructure table."></div>
-            <div><label>Curb RIGHT (offset)</label><input type="number" id="curb_r" value="21" step="0.1" placeholder="opt" title="Transverse offset (ft from baseline) of the right curb line. Used for curb elevations in the output. Can be overridden per support in the substructure table."></div>
+            <div><label>Curb LEFT (offset)</label><input type="number" id="curb_l" value="-21" step="0.1" placeholder="opt" title="Transverse offset (ft from the Bridge CL) of the left curb line. Used for curb elevations in the output. Can be overridden per support in the substructure table."></div>
+            <div><label>Curb RIGHT (offset)</label><input type="number" id="curb_r" value="21" step="0.1" placeholder="opt" title="Transverse offset (ft from the Bridge CL) of the right curb line. Used for curb elevations in the output. Can be overridden per support in the substructure table."></div>
           </div>
-          <p class="note">Global defaults. Per-span deck-edge overrides and per-support curb offsets available in the substructure table. Curb offsets interpolate linearly between supports.</p>
+          <p class="note"><strong>Girders, deck edges, and curbs are all measured from the Bridge CL</strong> (the center of the bridge), so they're symmetric about it by default. The Bridge CL itself is positioned relative to the PGL by the <em>Bridge CL offset</em> field above — changing that slides the whole deck (edges, girders, curbs) together. Per-span edge overrides and per-support curb offsets are in the substructure table.</p>
         </fieldset>
 
         <h2 class="sec">Superstructure Depths</h2>
@@ -353,7 +354,7 @@
     <div id="tbl_wrap" style="overflow-x:auto;"></div>
 
     <h2 class="sec" style="margin-top:26px;">Validation · known points</h2>
-    <p class="note" style="margin-top:-6px;">Spot-check the model against points whose elevation you already know (e.g. from a plan or independent calc). Enter each point's station, transverse offset from baseline, and expected top-of-deck elevation in its own box. Each is compared to the computed elevation and flagged if it differs by more than the tolerance.</p>
+    <p class="note" style="margin-top:-6px;">Spot-check the model against points whose elevation you already know (e.g. from a plan or independent calc). Enter each point's station, transverse offset (from the PGL, offset 0), and expected top-of-deck elevation in its own box. Each is compared to the computed elevation and flagged if it differs by more than the tolerance.</p>
     <div style="overflow-x:auto;"><table class="subtbl" id="val_tbl"></table></div>
     <div style="display:flex; gap:10px; align-items:end; margin-top:8px; flex-wrap:wrap;">
       <button class="sm ghost" id="val_add" title="Add a known point row.">+ Point</button>
@@ -474,8 +475,11 @@ function buildProfile(pviText){
 }
 
 /* ===== CROSS SECTION (crown/super, per-unit override, linear rate interp) ===== */
-function buildCrossSection(globalMode, globalRate, controls, pivot){
+function buildCrossSection(globalMode, globalRate, controls, pgl, crown){
+  // pgl  = transverse offset of the Profile Grade Line (deck elevation = profile elevation here; dz=0)
+  // crown= transverse offset of the crown high point (crown mode). Defaults to pgl when not separately set.
   const cps = controls.slice().sort((a,b)=>a.sta-b.sta);
+  const crownOff = (crown==null) ? pgl : crown;
   function rateAt(s){
     if(cps.length===0) return {mode:globalMode, rate:globalRate};
     if(s<=cps[0].sta) return {mode:cps[0].mode, rate:cps[0].rate};
@@ -485,9 +489,11 @@ function buildCrossSection(globalMode, globalRate, controls, pivot){
       return { mode: f<0.5?cps[i].mode:cps[i+1].mode, rate: cps[i].rate+(cps[i+1].rate-cps[i].rate)*f }; } }
     return {mode:globalMode, rate:globalRate};
   }
+  // cross-slope shape, then anchored so dz=0 at the PGL (deck = profile elevation there)
   function dz(s, off){ const {mode,rate}=rateAt(s);
-    return (mode==='crown') ? -Math.abs(rate)*Math.abs(off-pivot) : rate*(off-pivot); }
-  return { rateAt, dz, controls:cps };
+    const shape = (o)=> (mode==='crown') ? -Math.abs(rate)*Math.abs(o-crownOff) : rate*(o-crownOff);
+    return shape(off) - shape(pgl); }
+  return { rateAt, dz, controls:cps, pgl, crown:crownOff };
 }
 
 /* ===== ALIGNMENT / PROFILE / GIRDER INPUT STATE ===== */
@@ -592,38 +598,42 @@ function crossControls(){
   return {gMode,gRate,ctrls};
 }
 
+// Bridge CL offset from the PGL. Edges/girders/curbs are entered relative to the Bridge CL;
+// adding this converts them to PGL (engine) coordinates, so changing it slides the whole section.
+function bridgeCL(){ return +(document.getElementById('bcl_off')?.value||0); }
 function girdersForSpan(span){
-  const ov=SPAN_OV[span];
-  if(ov && ov.girders) return ov.girders;
-  return GIRDERS.slice();
+  const ov=SPAN_OV[span]; const b=bridgeCL();
+  const base = (ov && ov.girders) ? ov.girders : GIRDERS;
+  return base.map(g=>g+b);   // -> PGL coordinates
 }
 function edgesForSpan(span){
-  const ov=SPAN_OV[span]||{};
+  const ov=SPAN_OV[span]||{}; const b=bridgeCL();
   const gl=ov.edgeL!=null?ov.edgeL:+document.getElementById('edge_l').value;
   const gr=ov.edgeR!=null?ov.edgeR:+document.getElementById('edge_r').value;
-  return {l:gl, r:gr};
+  return {l:gl+b, r:gr+b};   // -> PGL coordinates
 }
 // Curb offset at a station, interpolated linearly between supports that have a curb value set.
 // side: 'L' or 'R'. Falls back to global curb field, then to deck edge, if unset.
+// Returns PGL coordinates (curb inputs are relative to the Bridge CL).
 function curbAt(sta, side){
   const key = side==='L'?'curbL':'curbR';
-  const su = sortedUnits();
+  const su = sortedUnits(); const b=bridgeCL();
   // collect supports that define this curb
   const pts = su.filter(u=>u[key]!=null && u[key]!=='').map(u=>({sta:u.sta, v:+u[key]}));
   if(pts.length===0){
     const gid = side==='L'?'curb_l':'curb_r';
     const gEl=document.getElementById(gid);
-    if(gEl && gEl.value!=='') return +gEl.value;
-    // fall back to deck edge
+    if(gEl && gEl.value!=='') return +gEl.value + b;
+    // fall back to deck edge (already in PGL coords)
     const span=Math.max(1,Math.min(su.length-1,spanOfSta(sta)));
     return side==='L'?edgesForSpan(span).l:edgesForSpan(span).r;
   }
-  if(pts.length===1) return pts[0].v;
-  if(sta<=pts[0].sta) return pts[0].v;
-  if(sta>=pts[pts.length-1].sta) return pts[pts.length-1].v;
+  if(pts.length===1) return pts[0].v + b;
+  if(sta<=pts[0].sta) return pts[0].v + b;
+  if(sta>=pts[pts.length-1].sta) return pts[pts.length-1].v + b;
   for(let i=0;i<pts.length-1;i++){ if(sta>=pts[i].sta && sta<=pts[i+1].sta){
-    const t=(sta-pts[i].sta)/(pts[i+1].sta-pts[i].sta); return pts[i].v+(pts[i+1].v-pts[i].v)*t; } }
-  return pts[0].v;
+    const t=(sta-pts[i].sta)/(pts[i+1].sta-pts[i].sta); return (pts[i].v+(pts[i+1].v-pts[i].v)*t) + b; } }
+  return pts[0].v + b;
 }
 function spanOfSta(s){
   const su=sortedUnits();
@@ -646,7 +656,9 @@ function buildEngine(){
     brg:isNaN(pobBrg)?90:pobBrg}, cfg.h_elems);
   const prof=buildProfile(cfg.v_pvis);
   const {gMode,gRate,ctrls}=crossControls();
-  const xsec=buildCrossSection(gMode,gRate,ctrls,+cfg.x_pivot);
+  // PGL = Baseline = Reference = offset 0 (always). Crown is an offset from the PGL.
+  const crownOff=+(document.getElementById('crown_off')?.value||0);
+  const xsec=buildCrossSection(gMode,gRate,ctrls,0,crownOff);
   const depths={slab:+cfg.d_slab, minHaunch:+cfg.d_haunch, beam:+cfg.d_beam,
                 bearing:+(cfg.d_bearing||0), camber:+(cfg.d_camber||0)};
   function getDeckPoint(sta,offset){
@@ -667,7 +679,7 @@ function buildEngine(){
     const drop = depths.slab + (depths.minHaunch + camber) + beamDepth + bearing;
     return { ...d, z:d.z-drop }; }
   return { align, prof, xsec, depths, getDeckPoint, getBeamSeat,
-    globalGirders: GIRDERS.slice() };
+    globalGirders: GIRDERS.map(g=>g+bridgeCL()) };
 }
 
 function bearingLinesFor(u){
@@ -934,19 +946,34 @@ function drawSection(){
     s+=`<text x="${x}" y="${TY(g.deckZ)-6}" font-size="8" font-family="monospace" fill="var(--cyan)" text-anchor="middle">${g.deckZ.toFixed(3)}</text>`;
     // girder label + offset
     s+=`<text x="${x}" y="${H-padBot+30}" font-size="8.5" font-family="monospace" fill="var(--ink-soft)" text-anchor="middle">G${g.bi+1}</text>`;
-    s+=`<text x="${x}" y="${H-padBot+42}" font-size="8" font-family="monospace" fill="var(--graphite)" text-anchor="middle">${g.o}</text>`;
+    s+=`<text x="${x}" y="${H-padBot+42}" font-size="8" font-family="monospace" fill="var(--graphite)" text-anchor="middle">${(g.o-bridgeCL()).toFixed(2)}</text>`;
   });
   // ---- vertical reference lines: deck edges, curbs ----
   const vline=(o,col,lab,dash)=>{ s+=`<line x1="${TX(o)}" y1="${padTop-6}" x2="${TX(o)}" y2="${H-padBot}" stroke="${col}" stroke-width="1" ${dash?`stroke-dasharray="${dash}"`:''} opacity="0.7"/>`;
     s+=`<text x="${TX(o)}" y="${padTop-9}" font-size="8.5" font-family="monospace" fill="${col}" text-anchor="middle">${lab}</text>`; };
   vline(edges.l,'var(--oxide)','Edge L','4 3'); vline(edges.r,'var(--oxide)','Edge R','4 3');
   vline(cl,'var(--cyan)','Curb L','5 3'); vline(cr,'var(--cyan)','Curb R','5 3');
-  // PGL (offset 0) and bridge CL
-  s+=`<line x1="${TX(0)}" y1="${padTop-6}" x2="${TX(0)}" y2="${H-padBot}" stroke="var(--graphite)" stroke-width="0.75" stroke-dasharray="2 4"/>`;
-  s+=`<text x="${TX(0)}" y="${padTop-9}" font-size="8.5" font-family="monospace" fill="var(--graphite)" text-anchor="middle">PGL</text>`;
-  const clMid=(edges.l+edges.r)/2;
-  if(Math.abs(clMid)>1e-6){ s+=`<line x1="${TX(clMid)}" y1="${padTop-6}" x2="${TX(clMid)}" y2="${H-padBot}" stroke="var(--ink-soft)" stroke-width="0.75" stroke-dasharray="2 4"/>`;
-    s+=`<text x="${TX(clMid)}" y="${padTop-9}" font-size="8.5" font-family="monospace" fill="var(--ink-soft)" text-anchor="middle">CL</text>`; }
+  // Three independent transverse references:
+  //  PGL   = Profile Grade Line = baseline = reference, fixed at offset 0 (deck = profile elevation here).
+  //  crown = deck high point, at the crown offset from the PGL.
+  //  CL    = bridge centerline, at the bridge-CL offset from the PGL.
+  const crownOff=+(document.getElementById('crown_off')?.value||0);
+  const bclOff=+(document.getElementById('bcl_off')?.value||0);
+  const refLine=(o,col,lab,dash,weight,bold)=>{
+    s+=`<line x1="${TX(o)}" y1="${padTop-6}" x2="${TX(o)}" y2="${H-padBot}" stroke="${col}" stroke-width="${weight}" stroke-dasharray="${dash}"/>`;
+    s+=`<text x="${TX(o)}" y="${padTop-9}" font-size="8.5" font-family="monospace" fill="${col}" text-anchor="middle"${bold?' font-weight="bold"':''}>${lab}</text>`;
+    s+=`<text x="${TX(o)}" y="${H-padBot+14}" font-size="7.5" font-family="monospace" fill="${col}" text-anchor="middle">${o.toFixed(2)}</text>`;
+  };
+  // collect references, then merge labels that share an x
+  const refs=[{o:0,col:'var(--oxide)',lab:'PGL',dash:'6 3',w:1.25,bold:true},
+              {o:bclOff,col:'var(--graphite)',lab:'CL',dash:'2 4',w:0.75,bold:false}];
+  if(Math.abs(crownOff)>1e-6) refs.push({o:crownOff,col:'var(--ink-soft)',lab:'crown',dash:'1 3',w:0.75,bold:false});
+  // detect coincidences to merge labels
+  const drawn=[];
+  refs.forEach(r=>{ const same=drawn.find(d=>Math.abs(d.o-r.o)<1e-6);
+    if(same){ same.lab+=' = '+r.lab; }
+    else drawn.push({...r}); });
+  drawn.forEach(r=>refLine(r.o,r.col,r.lab,r.dash,r.w,r.bold));
   // ---- cross-slope % labels: slope between adjacent girders (or edge-to-girder) ----
   const slopeLabel=(o1,z1,o2,z2)=>{ if(Math.abs(o2-o1)<1e-6)return; const pct=((z2-z1)/(o2-o1))*100;
     const xm=(TX(o1)+TX(o2))/2, ym=(TY(z1)+TY(z2))/2-6;
@@ -1188,6 +1215,7 @@ function buildTable(){
   if(su.length<2){ document.getElementById('tbl_wrap').innerHTML='<p class="note">Define at least two substructure units to generate the output table.</p>'; return; }
   const seat=false; // this tab is top-of-deck only
   const zAt = (st,o)=> ENG.getDeckPoint(st,o).z;
+  const bclOff=+(document.getElementById('bcl_off')?.value||0);
   let h='';
   if(mode==='grid'){
     const divisions=+document.getElementById('rep_div').value;
@@ -1196,8 +1224,8 @@ function buildTable(){
     h=`<table><thead><tr><th class="lbl">Span</th><th class="lbl">Station</th><th class="lbl" title="Marks rows that fall on a support centerline or bearing line.">Note</th>`+
       `<th title="Top-of-deck elevation at the left edge of deck.">Edge L</th><th title="Top-of-deck elevation at the left curb line.">Curb L</th>`;
     const gcols=ENG.globalGirders;
-    gcols.forEach((o,k)=>h+=`<th title="Top-of-deck elevation over girder ${k+1} (offset ${o} ft from baseline).">G${k+1}@${o}</th>`);
-    h+=`<th title="Top-of-deck elevation on the Profile Grade Line (alignment baseline, offset 0) \u2014 where the vertical profile is defined.">PGL</th><th title="Top-of-deck elevation at the bridge centerline (midpoint of the deck width, (edge L + edge R)/2). Differs from PGL when the deck is not symmetric about the baseline.">Bridge CL</th><th title="Top-of-deck elevation at the right curb line.">Curb R</th><th title="Top-of-deck elevation at the right edge of deck.">Edge R</th></tr></thead><tbody>`;
+    gcols.forEach((o,k)=>h+=`<th title="Top-of-deck elevation over girder ${k+1} (offset ${(o-bridgeCL()).toFixed(2)} ft from the Bridge CL).">G${k+1}@${(o-bridgeCL()).toFixed(2)}</th>`);
+    h+=`<th title="Top-of-deck elevation on the Profile Grade Line (alignment baseline, offset 0) \u2014 where the vertical profile is defined.">PGL</th><th title="Top-of-deck elevation at the bridge centerline (entered as an offset from the PGL). Differs from PGL when the CL offset is non-zero.">Bridge CL</th><th title="Top-of-deck elevation at the right curb line.">Curb R</th><th title="Top-of-deck elevation at the right edge of deck.">Edge R</th></tr></thead><tbody>`;
     for(let i=0;i<su.length-1;i++){ const span=i+1, s0=su[i].sta, s1=su[i+1].sta;
       const ed=edgesForSpan(span); const gs=girdersForSpan(span);
       const brgInSpan=allBrg.filter(b=>b.sta>=s0-1e-6 && b.sta<=s1+1e-6).map(b=>b.sta);
@@ -1217,7 +1245,7 @@ function buildTable(){
         h+=`<td>${zDeck(cl).toFixed(3)}</td>`;
         gs.forEach((o,bi)=>h+=`<td>${zGird(o,bi).toFixed(3)}</td>`);
         h+=`<td>${zDeck(0).toFixed(3)}</td>`;
-        h+=`<td>${zDeck((ed.l+ed.r)/2).toFixed(3)}</td>`;
+        h+=`<td>${zDeck(bclOff).toFixed(3)}</td>`;
         h+=`<td>${zDeck(cr).toFixed(3)}</td>`;
         h+=`<td>${zDeck(ed.r).toFixed(3)}</td></tr>`;
       });
@@ -1225,8 +1253,8 @@ function buildTable(){
     h+=`</tbody></table><p class="note">${seat?'Beam-seat':'Top-of-deck'} elevations per span. Rows are the even divisions plus each support centerline and bearing line (highlighted). Curb offsets interpolate between supports; columns G1..Gn use the global girder set (per-span overrides apply when counts match).</p>`;
   } else {
     h='<table><thead><tr><th class="lbl">Line</th><th>Skew°</th><th>Edge L</th><th>Curb L</th>';
-    ENG.globalGirders.forEach((o,k)=>h+=`<th>G${k+1}@${o}</th>`);
-    h+='<th title="Top-of-deck on the Profile Grade Line (baseline, offset 0).">PGL</th><th title="Top-of-deck at the bridge centerline, (edge L + edge R)/2.">Bridge CL</th><th>Curb R</th><th>Edge R</th></tr></thead><tbody>';
+    ENG.globalGirders.forEach((o,k)=>h+=`<th>G${k+1}@${(o-bridgeCL()).toFixed(2)}</th>`);
+    h+='<th title="Top-of-deck on the Profile Grade Line (baseline, offset 0).">PGL</th><th title="Top-of-deck at the bridge centerline (offset from PGL).">Bridge CL</th><th>Curb R</th><th>Edge R</th></tr></thead><tbody>';
     su.forEach(u=>bearingLinesFor(u).forEach(bl=>{
       // the span this bearing belongs to: a back bearing (sta<unit) is in the span ending here,
       // an ahead bearing (sta>unit) is in the span starting here. Nudge into the interior.
@@ -1240,7 +1268,7 @@ function buildTable(){
       h+=`<td>${zDeck(cl).toFixed(3)}</td>`;
       ENG.globalGirders.forEach((o,bi)=>{ h+=`<td>${zGird(o,bi).toFixed(3)}</td>`; });
       h+=`<td>${zDeck(0).toFixed(3)}</td>`;
-      h+=`<td>${zDeck((ed.l+ed.r)/2).toFixed(3)}</td>`;
+      h+=`<td>${zDeck(bclOff).toFixed(3)}</td>`;
       h+=`<td>${zDeck(cr).toFixed(3)}</td>`;
       h+=`<td>${zDeck(ed.r).toFixed(3)}</td>`;
       h+='</tr>'; }));
@@ -1274,7 +1302,7 @@ function buildSeatTable(){
   const data=seatData();
   const gcols=ENG.globalGirders;
   let h='<table><thead><tr><th class="lbl" title="The bearing line: a support centerline, or back/ahead bearing at a dual-bearing pier.">Bearing line</th><th class="lbl" title="Station of this bearing line.">Station</th><th title="Skew of the support, degrees from the alignment normal.">Skew°</th><th class="lbl" title="The span this bearing belongs to (its camber/depth/bearing come from this span).">Span</th>';
-  gcols.forEach((o,k)=>h+=`<th title="Beam-seat elevation for girder ${k+1} (offset ${o} ft) at this bearing line.">G${k+1}@${o}</th>`);
+  gcols.forEach((o,k)=>h+=`<th title="Beam-seat elevation for girder ${k+1} (offset ${(o-bridgeCL()).toFixed(2)} ft from the Bridge CL) at this bearing line.">G${k+1}@${(o-bridgeCL()).toFixed(2)}</th>`);
   h+='</tr></thead><tbody>';
   data.forEach(r=>{
     h+=`<tr><td class="lbl" style="color:var(--cyan)">${r.label}</td><td class="lbl">${formatStation(r.sta)}</td><td>${r.skew.toFixed(1)}</td><td class="lbl">${r.span}</td>`;
@@ -1348,12 +1376,12 @@ function drawSeatSection(svgId, r){
   [['Curb L',cl],['Curb R',cr]].forEach(([lab,o])=>{
     s+=`<line x1="${TX(o)}" y1="${TY(hiZ)}" x2="${TX(o)}" y2="${TY(loZ)}" stroke="var(--cyan)" stroke-width="1" stroke-dasharray="5 3"/>`;
     s+=`<text x="${TX(o)}" y="${TY(hiZ)-4}" font-size="9" font-family="monospace" fill="var(--cyan)" text-anchor="middle">${lab}</text>`; });
-  // PGL (offset 0) and bridge CL (deck-width midpoint) markers
+  // PGL (offset 0) and bridge CL (offset from PGL) markers
   s+=`<line x1="${TX(0)}" y1="${TY(hiZ)}" x2="${TX(0)}" y2="${TY(loZ)}" stroke="var(--oxide)" stroke-width="0.75" stroke-dasharray="2 4"/>`;
   s+=`<text x="${TX(0)}" y="${TY(loZ)+12}" font-size="8" font-family="monospace" fill="var(--oxide)" text-anchor="middle">PGL</text>`;
-  const clMid=(ed.l+ed.r)/2;
-  if(Math.abs(clMid)>1e-6){ s+=`<line x1="${TX(clMid)}" y1="${TY(hiZ)}" x2="${TX(clMid)}" y2="${TY(loZ)}" stroke="var(--ink-soft)" stroke-width="0.75" stroke-dasharray="2 4"/>`;
-    s+=`<text x="${TX(clMid)}" y="${TY(loZ)+12}" font-size="8" font-family="monospace" fill="var(--ink-soft)" text-anchor="middle">CL</text>`; }
+  const bclOff=+(document.getElementById('bcl_off')?.value||0);
+  if(Math.abs(bclOff)>1e-6){ s+=`<line x1="${TX(bclOff)}" y1="${TY(hiZ)}" x2="${TX(bclOff)}" y2="${TY(loZ)}" stroke="var(--ink-soft)" stroke-width="0.75" stroke-dasharray="2 4"/>`;
+    s+=`<text x="${TX(bclOff)}" y="${TY(loZ)+12}" font-size="8" font-family="monospace" fill="var(--ink-soft)" text-anchor="middle">CL</text>`; }
   // beam centerlines + seat callouts
   r.seats.forEach((st,k)=>{
     const x=TX(st.off), ySeat=TY(st.seatZ), yDeck=TY(st.deckZ);
@@ -1671,7 +1699,7 @@ function renderOvrGrid(){
 /* ===== SUBSTRUCTURE TABLE UI ===== */
 function renderSubTable(){
   const t=document.getElementById('subtbl');
-  let h='<thead><tr><th></th><th class="lbl">Name</th><th title="Centerline station of this support (NNN+NN.NN).">Station</th><th title="Skew angle in degrees, measured from the alignment normal. 0 = support perpendicular to the alignment.">Skew°</th><th title="Single = one bearing line at the support station. Double = two bearing lines, back and ahead of the station (typical at piers).">Bearing</th><th title="For a double bearing, the distance (ft) each bearing line sits back/ahead of the support station.">Offset</th><th title="Left curb offset (ft from baseline) at this support; blank uses the global curb. Interpolated linearly between supports.">Curb L</th><th title="Right curb offset (ft from baseline) at this support; blank uses the global curb. Interpolated linearly between supports.">Curb R</th><th title="Optional cross-section override at this support (crown/super); blank uses the global cross-section.">X-sec</th><th title="Cross-slope rate for this support\u2019s override, as a decimal.">Rate</th></tr></thead><tbody>';
+  let h='<thead><tr><th></th><th class="lbl">Name</th><th title="Centerline station of this support (NNN+NN.NN).">Station</th><th title="Skew angle in degrees, measured from the alignment normal. 0 = support perpendicular to the alignment.">Skew°</th><th title="Single = one bearing line at the support station. Double = two bearing lines, back and ahead of the station (typical at piers).">Bearing</th><th title="For a double bearing, the distance (ft) each bearing line sits back/ahead of the support station.">Offset</th><th title="Left curb offset (ft from the Bridge CL) at this support; blank uses the global curb. Interpolated linearly between supports.">Curb L</th><th title="Right curb offset (ft from the Bridge CL) at this support; blank uses the global curb. Interpolated linearly between supports.">Curb R</th><th title="Optional cross-section override at this support (crown/super); blank uses the global cross-section.">X-sec</th><th title="Cross-slope rate for this support\u2019s override, as a decimal.">Rate</th></tr></thead><tbody>';
   UNITS.forEach((u,i)=>{
     h+=`<tr>
       <td><span class="utag ${u.type}">${u.type}</span></td>
@@ -1713,9 +1741,9 @@ function renderSpanTable(){
   const gEdgeL=document.getElementById('edge_l').value, gEdgeR=document.getElementById('edge_r').value;
   let h='<thead><tr>'+
     '<th class="lbl" title="Span number and the two supports it runs between.">Span</th>'+
-    `<th title="Override the girder layout for this span only. Enter offsets (ft from baseline) as a comma-separated list, e.g. -18, -6, 6, 18. Blank = use the global set (${gGird}).">Girder offsets (ft) &mdash; blank uses global</th>`+
-    '<th title="Override the left deck-edge offset (ft from baseline) for this span. Blank = global.">Edge L</th>'+
-    '<th title="Override the right deck-edge offset (ft from baseline) for this span. Blank = global.">Edge R</th>'+
+    `<th title="Override the girder layout for this span only. Enter offsets (ft from the Bridge CL) as a comma-separated list, e.g. -18, -6, 6, 18. Blank = use the global set (${gGird}).">Girder offsets (ft) &mdash; blank uses global</th>`+
+    '<th title="Override the left deck-edge offset (ft from the Bridge CL) for this span. Blank = global.">Edge L</th>'+
+    '<th title="Override the right deck-edge offset (ft from the Bridge CL) for this span. Blank = global.">Edge R</th>'+
     '<th title="Number of girders in effect for this span (override if set, otherwise global)."># Gird</th>'+
     '</tr></thead><tbody>';
   for(let s=1;s<=nSpan;s++){ const ov=SPAN_OV[s]||{};
@@ -1988,7 +2016,7 @@ let _heatResizeT=null;
 window.addEventListener('resize',()=>{ clearTimeout(_heatResizeT); _heatResizeT=setTimeout(()=>{ if(ENG) drawHeatmap(); },120); });
 ['ly_fill','ly_align','ly_gird','ly_edge','ly_sub','ly_brg','ly_sta','ly_gpt','ly_elev'].forEach(id=>{
   const el=document.getElementById(id); if(el) el.addEventListener('change',()=>{ if(ENG) drawHeatmap(); }); });
-['x_mode_global','x_rate_global','x_pivot','edge_l','edge_r','curb_l','curb_r','d_slab','d_haunch','d_beam','d_bearing','d_camber'].forEach(id=>
+['x_mode_global','x_rate_global','crown_off','bcl_off','edge_l','edge_r','curb_l','curb_r','d_slab','d_haunch','d_beam','d_bearing','d_camber'].forEach(id=>
   document.getElementById(id).addEventListener('change',()=>{ renderOvrGrid(); renderSpanTable(); if(ENG) compute(); }));
 document.getElementById('ovr_toggle').addEventListener('click',()=>{
   const p=document.getElementById('ovr_panel'); const open=p.style.display!=='none';
@@ -2102,7 +2130,7 @@ const STORAGE_KEY = 'bridgeGeomEngine.project.v1';
 const LIBRARY_KEY = 'bridgeGeomEngine.library.v1';
 let CURRENT_NAME = null; // name of the loaded library entry, if any
 const SCALAR_IDS = ['h_sta0','h_x0','h_y0','h_brg0','nspans','x_mode_global','x_rate_global',
-  'x_pivot','edge_l','edge_r','curb_l','curb_r','d_slab','d_haunch','d_beam','d_bearing','d_camber','divs','rep_mode','rep_div','val_tol'];
+  'x_pivot','crown_off','bcl_off','edge_l','edge_r','curb_l','curb_r','d_slab','d_haunch','d_beam','d_bearing','d_camber','divs','rep_mode','rep_div','val_tol'];
 
 function serializeProject(){
   const scalars={}; SCALAR_IDS.forEach(id=>{ const el=document.getElementById(id); if(el) scalars[id]= el.type==='checkbox'?el.checked:el.value; });

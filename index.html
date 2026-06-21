@@ -23,6 +23,8 @@
   header .sub { font-size: 12px; color: var(--ink-soft); letter-spacing: .06em; text-transform: uppercase; }
   header .ver { margin-left: auto; font-size: 11px; color: var(--graphite); }
   .tabs { display: flex; gap: 2px; }
+  .projbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:8px 16px; margin-bottom:6px;
+    background: rgba(255,255,255,.28); border:1px solid var(--graphite); border-radius:3px; }
   .tabbtn { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; padding: 9px 18px;
     border: 1px solid var(--graphite); border-bottom: none; background: var(--vellum-edge); color: var(--ink-soft);
     cursor: pointer; border-radius: 4px 4px 0 0; position: relative; top: 2px; }
@@ -89,6 +91,30 @@
     <span class="sub">deck &amp; beam-seat elevations</span>
     <span class="ver">v0.3 · spans · 3D · heatmap</span>
   </div>
+  <div class="projbar">
+    <span class="note" style="text-transform:none;">Bridge:</span>
+    <span class="pill" id="cur_name">(unsaved)</span>
+    <button class="sm" id="proj_savelib" title="Save the current bridge to the library (updates the loaded entry, or prompts for a name).">Save</button>
+    <button class="sm ghost" id="proj_saveas" title="Save the current bridge under a new name.">Save As</button>
+    <button class="sm ghost" id="lib_toggle" type="button" title="Open the saved-bridge library.">&#9656; Library</button>
+    <button class="sm ghost" id="proj_new" title="Clear to a fresh demo bridge.">New</button>
+    <span class="sep" style="display:inline-block;width:1px;height:18px;background:var(--graphite);margin:0 2px;"></span>
+    <button class="sm ghost" id="proj_save" title="Export the current bridge as a JSON file.">Export JSON</button>
+    <button class="sm ghost" id="proj_load" title="Import a bridge from a JSON file.">Import JSON</button>
+    <input type="file" id="proj_file" accept="application/json,.json" style="display:none">
+    <span class="note" id="save_status" style="margin-left:auto;">—</span>
+  </div>
+  <div id="lib_panel" style="display:none; margin:0 16px 10px;">
+    <fieldset>
+      <legend>saved bridges (stored in this browser)</legend>
+      <p class="note" style="margin-top:0;">Save multiple bridges and switch between them. These are stored locally in this browser only &mdash; use <strong>Export JSON</strong> to keep a portable copy or move a bridge to another machine. <strong>Save As</strong> adds a new entry; <strong>Save</strong> updates the one currently loaded.</p>
+      <div style="display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+        <button class="sm" id="lib_saveas">Save current as&hellip;</button>
+        <button class="sm ghost" id="lib_refresh">Refresh list</button>
+      </div>
+      <div id="lib_list" style="overflow-x:auto;"></div>
+    </fieldset>
+  </div>
   <div class="tabs" role="tablist">
     <button class="tabbtn" role="tab" aria-selected="true"  data-tab="align">Alignment</button>
     <button class="tabbtn" role="tab" aria-selected="false" data-tab="bridge">Bridge</button>
@@ -133,33 +159,6 @@
     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
       <button id="run">Compute</button>
       <button class="ghost" id="loadval">Load validation set</button>
-      <span style="display:inline-flex; align-items:center; gap:6px; margin-left:8px;">
-        <span class="note" style="text-transform:none;">Bridge:</span>
-        <span class="pill" id="cur_name">(unsaved)</span>
-      </span>
-      <button class="sm" id="proj_savelib" title="Save the current bridge to the library (updates the loaded entry, or prompts for a name).">Save</button>
-      <button class="sm ghost" id="proj_saveas" title="Save the current bridge under a new name.">Save As</button>
-      <button class="sm ghost" id="proj_new" title="Clear to a fresh demo bridge.">New / reset</button>
-      <span class="sep" style="display:inline-block;width:1px;height:18px;background:var(--graphite);margin:0 4px;"></span>
-      <button class="sm ghost" id="proj_save" title="Export the current bridge as a JSON file.">Export JSON</button>
-      <button class="sm ghost" id="proj_load" title="Import a bridge from a JSON file.">Import JSON</button>
-      <input type="file" id="proj_file" accept="application/json,.json" style="display:none">
-      <span class="note" id="save_status" style="margin-left:auto;">—</span>
-    </div>
-
-    <div style="margin-top:10px;">
-      <button class="sm ghost" id="lib_toggle" type="button">\u25b8 Bridge Library</button>
-      <div id="lib_panel" style="display:none; margin-top:8px;">
-        <fieldset>
-          <legend>saved bridges (stored in this browser)</legend>
-          <p class="note" style="margin-top:0;">Save multiple bridges and switch between them. These are stored locally in this browser only &mdash; use <strong>Export JSON</strong> to keep a portable copy or move a bridge to another machine. <strong>Save As</strong> adds a new entry; <strong>Save</strong> updates the one currently loaded.</p>
-          <div style="display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
-            <button class="sm" id="lib_saveas">Save current as\u2026</button>
-            <button class="sm ghost" id="lib_refresh">Refresh list</button>
-          </div>
-          <div id="lib_list" style="overflow-x:auto;"></div>
-        </fieldset>
-      </div>
     </div>
 
     <h2 class="sec" style="margin-top:18px;">Graphics</h2>
@@ -270,7 +269,7 @@
           <label style="display:inline-flex; gap:5px; align-items:center; margin:0;"><input type="checkbox" id="l3_ground" style="width:auto"> ground plane</label>
           <span style="display:inline-flex; gap:6px; align-items:center; margin-left:auto;">vert. exag.
             <input type="range" id="l3_exag" min="0" max="100" step="1" value="50" style="width:120px;" title="Vertical exaggeration. Bridges are long and shallow, so elevations are scaled up to make the deck shape and grades visible. Midpoint = 1 (true scale); left compresses, right exaggerates.">
-            <span id="l3_exag_val" style="font-family:monospace;">1.0\u00d7</span></span>
+            <span id="l3_exag_val" style="font-family:monospace;">1.0&times;</span></span>
         </div>
         <div class="svgcard">
           <div class="cap"><span>3D</span><span class="note" style="text-transform:none;letter-spacing:0;">deck, girders, beam seats &amp; substructure</span>
@@ -2276,7 +2275,7 @@ document.getElementById('lib_refresh').addEventListener('click', renderLibrary);
 document.getElementById('lib_toggle').addEventListener('click', ()=>{
   const p=document.getElementById('lib_panel'); const open=p.style.display!=='none';
   p.style.display=open?'none':'block';
-  document.getElementById('lib_toggle').textContent=(open?'\u25b8':'\u25be')+' Bridge Library';
+  document.getElementById('lib_toggle').textContent=(open?'\u25b8':'\u25be')+' Library';
   if(!open) renderLibrary();
 });
 

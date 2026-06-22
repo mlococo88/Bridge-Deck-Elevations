@@ -2279,6 +2279,9 @@ function saveNow(){ // immediate, non-debounced write
 function autosave(){
   if(!_storageOK) return;
   _dirty=true;
+  // leading write: persist right away so a fast refresh keeps the change,
+  // then a trailing debounced write coalesces rapid edits.
+  saveNow();
   clearTimeout(_saveTimer);
   _saveTimer=setTimeout(saveNow, 600);
 }
@@ -2423,15 +2426,20 @@ document.getElementById('lib_toggle').addEventListener('click', ()=>{
   if(!open) renderLibrary();
 });
 
-// boot: build engine once so renders have something, then try restore; fall back to defaults
+// boot: build a minimal engine so renders have something, then restore the last session if present.
 seedSpans(2);
 ENG=buildEngine();
-(function(){ const su=sortedUnits(); if(su[0])su[0].sta=0; if(su[1])su[1].sta=500; if(su[2])su[2].sta=1000; if(UNITS[1]) UNITS[1].skew=15; })();
-renderElemTable(); renderVProfTable(); renderGirderTable(); renderSubTable(); renderSpanTable(); renderOvrGrid(); renderValTable();
-compute();
-if(!restoreOnOpen()){ /* keep the demo bridge already built above */ }
+const _restored = restoreOnOpen();
+if(!_restored){
+  // no saved session — set up the demo bridge
+  (function(){ const su=sortedUnits(); if(su[0])su[0].sta=0; if(su[1])su[1].sta=500; if(su[2])su[2].sta=1000; if(UNITS[1]) UNITS[1].skew=15; })();
+  renderElemTable(); renderVProfTable(); renderGirderTable(); renderSubTable(); renderSpanTable(); renderOvrGrid(); renderValTable();
+  compute();
+}
 updateNameDisplay(); renderLibrary();
 armAutosave();
+// ensure there is always a snapshot in storage from the first moment, so the next refresh restores
+saveNow();
 </script>
 </body>
 </html>

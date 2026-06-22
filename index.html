@@ -39,6 +39,8 @@
   legend { font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-soft); padding: 0 6px; }
   label { display: block; font-size: 11px; color: var(--ink-soft); margin: 8px 0 2px; letter-spacing: .03em; }
   .unit { color: var(--oxide); font-weight: 600; letter-spacing: 0; }
+  .cfg { display:inline-flex; gap:4px; align-items:center; font-size:11px; color:var(--ink-soft); margin:0; }
+  .cfg input { width:auto; }
   input[type=number],input[type=text],select,textarea { width: 100%; padding: 5px 7px; border: 1px solid var(--graphite);
     background: var(--paper); color: var(--ink); border-radius: 2px; font-size: 13px; }
   textarea { line-height: 1.5; resize: vertical; }
@@ -63,6 +65,9 @@
   .view3d { width: 100%; height: 320px; display: block; background: var(--paper); }
   .view3d-tall { height: 460px; }
   table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  /* output tables can have many columns: size to content and let the wrapper scroll horizontally */
+  table.wide { width: auto; min-width: 100%; }
+  table.wide th, table.wide td { white-space: nowrap; }
   th,td { border: 1px solid var(--graphite); padding: 3px 7px; text-align: right; }
   th { background: var(--vellum-edge); font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: .06em; color: var(--ink-soft); }
   td.lbl,th.lbl { text-align: left; }
@@ -356,6 +361,25 @@
         </select></div>
       <div><label>Divisions</label><input type="number" id="rep_div" value="10" min="2" step="1" style="width:90px" title="Number of equal intervals per span for the elevation table (span-divisions mode). Support centerlines and bearing lines are always added as extra rows."></div>
       <div></div>
+    </div>
+    <div style="margin-bottom:10px;">
+      <button class="sm ghost" id="colfilt_toggle" type="button">&#9656; Columns</button>
+      <span class="note" style="margin-left:8px;">show / hide table columns</span>
+      <div id="colfilt_panel" style="display:none; margin-top:8px;">
+        <fieldset>
+          <legend>visible columns</legend>
+          <div style="display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; margin-bottom:8px;">
+            <strong style="font-size:11px; color:var(--ink-soft);">Groups:</strong>
+            <label class="cfg"><input type="checkbox" data-grp="edges" checked> Edges</label>
+            <label class="cfg"><input type="checkbox" data-grp="curbs" checked> Curbs</label>
+            <label class="cfg"><input type="checkbox" data-grp="girders" checked> Girders</label>
+            <label class="cfg"><input type="checkbox" data-grp="pgl" checked> PGL</label>
+            <label class="cfg"><input type="checkbox" data-grp="bcl" checked> Bridge CL</label>
+            <span style="margin-left:auto;"><button class="sm ghost" id="colfilt_all" type="button">All</button> <button class="sm ghost" id="colfilt_none" type="button">None</button></span>
+          </div>
+          <div id="colfilt_cols" style="display:flex; flex-wrap:wrap; gap:5px 12px;"></div>
+        </fieldset>
+      </div>
     </div>
     <div id="tbl_wrap" style="overflow-x:auto;"></div>
 
@@ -1220,6 +1244,45 @@ function spanStationRows(s0, s1, divisions, bearingStas){
   (bearingStas||[]).forEach(b=>{ if(b>=s0-1e-6 && b<=s1+1e-6) set.add(+b.toFixed(4)); });
   return [...set].sort((a,b)=>a-b);
 }
+/* ===== TABLE COLUMN VISIBILITY ===== */
+// keys: edgeL, curbL, g0..g(n-1), pgl, bcl, curbR, edgeR. Hidden keys live in COLHIDE.
+const COLHIDE = new Set();
+function colGroup(key){
+  if(key==='edgeL'||key==='edgeR') return 'edges';
+  if(key==='curbL'||key==='curbR') return 'curbs';
+  if(key==='pgl') return 'pgl';
+  if(key==='bcl') return 'bcl';
+  if(/^g\d+$/.test(key)) return 'girders';
+  return null;
+}
+function colVisible(key){ return !COLHIDE.has(key); }
+// the ordered column list for the current girder set
+function tableColumns(){
+  const cols=[{key:'edgeL',lab:'Edge L'},{key:'curbL',lab:'Curb L'}];
+  (ENG?ENG.globalGirders:[]).forEach((o,k)=>cols.push({key:'g'+k, lab:'G'+(k+1)}));
+  cols.push({key:'pgl',lab:'PGL'},{key:'bcl',lab:'Bridge CL'},{key:'curbR',lab:'Curb R'},{key:'edgeR',lab:'Edge R'});
+  return cols;
+}
+function renderColFilter(){
+  const host=document.getElementById('colfilt_cols'); if(!host) return;
+  const cols=tableColumns();
+  host.innerHTML=cols.map(c=>`<label class="cfg"><input type="checkbox" data-col="${c.key}" ${colVisible(c.key)?'checked':''}> ${c.lab}</label>`).join('');
+  host.querySelectorAll('input[data-col]').forEach(cb=>cb.addEventListener('change',()=>{
+    const k=cb.dataset.col; if(cb.checked) COLHIDE.delete(k); else COLHIDE.add(k);
+    syncGroupChecks(); buildTable();
+  }));
+  syncGroupChecks();
+}
+// reflect whether each group is fully on / off in the group checkboxes (indeterminate if mixed)
+function syncGroupChecks(){
+  const cols=tableColumns();
+  document.querySelectorAll('input[data-grp]').forEach(g=>{
+    const grp=g.dataset.grp; const members=cols.filter(c=>colGroup(c.key)===grp);
+    if(members.length===0){ g.checked=false; g.indeterminate=false; return; }
+    const on=members.filter(c=>colVisible(c.key)).length;
+    g.checked = on===members.length; g.indeterminate = on>0 && on<members.length;
+  });
+}
 function buildTable(){
   const mode=document.getElementById('rep_mode').value; const su=sortedUnits();
   if(su.length<2){ document.getElementById('tbl_wrap').innerHTML='<p class="note">Define at least two substructure units to generate the output table.</p>'; return; }
@@ -1227,15 +1290,23 @@ function buildTable(){
   const zAt = (st,o)=> ENG.getDeckPoint(st,o).z;
   const bclOff=+(document.getElementById('bcl_off')?.value||0);
   let h='';
+  // helpers to emit header/cell only when the column is visible
+  const TH=(key,html)=> colVisible(key)?html:'';
+  const TD=(key,val)=> colVisible(key)?`<td>${val}</td>`:'';
   if(mode==='grid'){
     const divisions=+document.getElementById('rep_div').value;
     // all distinct bearing-line stations across the bridge (for marking rows)
     const allBrg=[]; su.forEach(u=>bearingLinesFor(u).forEach(bl=>allBrg.push({sta:bl.sta,label:bl.label})));
-    h=`<table><thead><tr><th class="lbl">Span</th><th class="lbl">Station</th><th class="lbl" title="Marks rows that fall on a support centerline or bearing line.">Note</th>`+
-      `<th title="Top-of-deck elevation at the left edge of deck.">Edge L</th><th title="Top-of-deck elevation at the left curb line.">Curb L</th>`;
+    h=`<table class="wide"><thead><tr><th class="lbl">Span</th><th class="lbl">Station</th><th class="lbl" title="Marks rows that fall on a support centerline or bearing line.">Note</th>`+
+      TH('edgeL','<th title="Top-of-deck elevation at the left edge of deck.">Edge L</th>')+
+      TH('curbL','<th title="Top-of-deck elevation at the left curb line.">Curb L</th>');
     const gcols=ENG.globalGirders;
-    gcols.forEach((o,k)=>h+=`<th title="Top-of-deck elevation over girder ${k+1} (offset ${(o-bridgeCL()).toFixed(2)} ft from the Bridge CL).">G${k+1}@${(o-bridgeCL()).toFixed(2)}</th>`);
-    h+=`<th title="Top-of-deck elevation on the Profile Grade Line (alignment baseline, offset 0) \u2014 where the vertical profile is defined.">PGL</th><th title="Top-of-deck elevation at the bridge centerline (entered as an offset from the PGL). Differs from PGL when the CL offset is non-zero.">Bridge CL</th><th title="Top-of-deck elevation at the right curb line.">Curb R</th><th title="Top-of-deck elevation at the right edge of deck.">Edge R</th></tr></thead><tbody>`;
+    gcols.forEach((o,k)=>h+=TH('g'+k,`<th title="Top-of-deck elevation over girder ${k+1} (offset ${(o-bridgeCL()).toFixed(2)} ft from the Bridge CL).">G${k+1}@${(o-bridgeCL()).toFixed(2)}</th>`));
+    h+=TH('pgl','<th title="Top-of-deck elevation on the Profile Grade Line (alignment baseline, offset 0) \u2014 where the vertical profile is defined.">PGL</th>')+
+       TH('bcl','<th title="Top-of-deck elevation at the bridge centerline (entered as an offset from the PGL). Differs from PGL when the CL offset is non-zero.">Bridge CL</th>')+
+       TH('curbR','<th title="Top-of-deck elevation at the right curb line.">Curb R</th>')+
+       TH('edgeR','<th title="Top-of-deck elevation at the right edge of deck.">Edge R</th>')+
+       `</tr></thead><tbody>`;
     for(let i=0;i<su.length-1;i++){ const span=i+1, s0=su[i].sta, s1=su[i+1].sta;
       const ed=edgesForSpan(span); const gs=girdersForSpan(span);
       const brgInSpan=allBrg.filter(b=>b.sta>=s0-1e-6 && b.sta<=s1+1e-6).map(b=>b.sta);
@@ -1251,20 +1322,24 @@ function buildTable(){
         const zDeck=(o)=>ENG.getDeckPoint(sta,o).z;
         const zGird=(o,bi)=> seat ? ENG.getBeamSeat(sta,o,{bi,span}).z : ENG.getDeckPoint(sta,o).z;
         h+=`<tr${note?' style="background:rgba(27,110,120,.06)"':''}><td class="lbl">${span}</td><td class="lbl">${formatStation(sta)}</td><td class="lbl" style="color:var(--cyan);font-size:10px">${note}</td>`;
-        h+=`<td>${zDeck(ed.l).toFixed(3)}</td>`;
-        h+=`<td>${zDeck(cl).toFixed(3)}</td>`;
-        gs.forEach((o,bi)=>h+=`<td>${zGird(o,bi).toFixed(3)}</td>`);
-        h+=`<td>${zDeck(0).toFixed(3)}</td>`;
-        h+=`<td>${zDeck(bclOff).toFixed(3)}</td>`;
-        h+=`<td>${zDeck(cr).toFixed(3)}</td>`;
-        h+=`<td>${zDeck(ed.r).toFixed(3)}</td></tr>`;
+        h+=TD('edgeL',zDeck(ed.l).toFixed(2));
+        h+=TD('curbL',zDeck(cl).toFixed(2));
+        gs.forEach((o,bi)=>h+=TD('g'+bi,zGird(o,bi).toFixed(2)));
+        h+=TD('pgl',zDeck(0).toFixed(2));
+        h+=TD('bcl',zDeck(bclOff).toFixed(2));
+        h+=TD('curbR',zDeck(cr).toFixed(2));
+        h+=TD('edgeR',zDeck(ed.r).toFixed(2));
+        h+='</tr>';
       });
     }
     h+=`</tbody></table><p class="note">${seat?'Beam-seat':'Top-of-deck'} elevations per span. Rows are the even divisions plus each support centerline and bearing line (highlighted). Curb offsets interpolate between supports; columns G1..Gn use the global girder set (per-span overrides apply when counts match).</p>`;
   } else {
-    h='<table><thead><tr><th class="lbl">Line</th><th>Skew°</th><th>Edge L</th><th>Curb L</th>';
-    ENG.globalGirders.forEach((o,k)=>h+=`<th>G${k+1}@${(o-bridgeCL()).toFixed(2)}</th>`);
-    h+='<th title="Top-of-deck on the Profile Grade Line (baseline, offset 0).">PGL</th><th title="Top-of-deck at the bridge centerline (offset from PGL).">Bridge CL</th><th>Curb R</th><th>Edge R</th></tr></thead><tbody>';
+    h='<table class="wide"><thead><tr><th class="lbl">Line</th><th>Skew°</th>'+
+      TH('edgeL','<th>Edge L</th>')+TH('curbL','<th>Curb L</th>');
+    ENG.globalGirders.forEach((o,k)=>h+=TH('g'+k,`<th>G${k+1}@${(o-bridgeCL()).toFixed(2)}</th>`));
+    h+=TH('pgl','<th title="Top-of-deck on the Profile Grade Line (baseline, offset 0).">PGL</th>')+
+       TH('bcl','<th title="Top-of-deck at the bridge centerline (offset from PGL).">Bridge CL</th>')+
+       TH('curbR','<th>Curb R</th>')+TH('edgeR','<th>Edge R</th>')+'</tr></thead><tbody>';
     su.forEach(u=>bearingLinesFor(u).forEach(bl=>{
       // the span this bearing belongs to: a back bearing (sta<unit) is in the span ending here,
       // an ahead bearing (sta>unit) is in the span starting here. Nudge into the interior.
@@ -1274,17 +1349,18 @@ function buildTable(){
       const zDeck=(o)=>ENG.getDeckPoint(staOnBearing(bl.sta,bl.skew,o),o).z;
       const zGird=(o,bi)=>{ const st=staOnBearing(bl.sta,bl.skew,o); return seat?ENG.getBeamSeat(st,o,{bi,span}).z:ENG.getDeckPoint(st,o).z; };
       h+=`<tr><td class="lbl">${bl.label}</td><td>${bl.skew.toFixed(1)}</td>`;
-      h+=`<td>${zDeck(ed.l).toFixed(3)}</td>`;
-      h+=`<td>${zDeck(cl).toFixed(3)}</td>`;
-      ENG.globalGirders.forEach((o,bi)=>{ h+=`<td>${zGird(o,bi).toFixed(3)}</td>`; });
-      h+=`<td>${zDeck(0).toFixed(3)}</td>`;
-      h+=`<td>${zDeck(bclOff).toFixed(3)}</td>`;
-      h+=`<td>${zDeck(cr).toFixed(3)}</td>`;
-      h+=`<td>${zDeck(ed.r).toFixed(3)}</td>`;
+      h+=TD('edgeL',zDeck(ed.l).toFixed(2));
+      h+=TD('curbL',zDeck(cl).toFixed(2));
+      ENG.globalGirders.forEach((o,bi)=>{ h+=TD('g'+bi,zGird(o,bi).toFixed(2)); });
+      h+=TD('pgl',zDeck(0).toFixed(2));
+      h+=TD('bcl',zDeck(bclOff).toFixed(2));
+      h+=TD('curbR',zDeck(cr).toFixed(2));
+      h+=TD('edgeR',zDeck(ed.r).toFixed(2));
       h+='</tr>'; }));
     h+=`</tbody></table><p class="note">${seat?'Beam-seat':'Top-of-deck'} elevations at each bearing line, taken along the skewed support.</p>`;
   }
   document.getElementById('tbl_wrap').innerHTML=h;
+  renderColFilter();
 }
 
 /* ===== BEAM SEAT OUTPUT ===== */
@@ -1311,13 +1387,13 @@ function buildSeatTable(){
   if(su.length<2){ wrap.innerHTML='<p class="note">Define at least two substructure units to generate beam seats.</p>'; return; }
   const data=seatData();
   const gcols=ENG.globalGirders;
-  let h='<table><thead><tr><th class="lbl" title="The bearing line: a support centerline, or back/ahead bearing at a dual-bearing pier.">Bearing line</th><th class="lbl" title="Station of this bearing line.">Station</th><th title="Skew of the support, degrees from the alignment normal.">Skew°</th><th class="lbl" title="The span this bearing belongs to (its camber/depth/bearing come from this span).">Span</th>';
+  let h='<table class="wide"><thead><tr><th class="lbl" title="The bearing line: a support centerline, or back/ahead bearing at a dual-bearing pier.">Bearing line</th><th class="lbl" title="Station of this bearing line.">Station</th><th title="Skew of the support, degrees from the alignment normal.">Skew°</th><th class="lbl" title="The span this bearing belongs to (its camber/depth/bearing come from this span).">Span</th>';
   gcols.forEach((o,k)=>h+=`<th title="Beam-seat elevation for girder ${k+1} (offset ${(o-bridgeCL()).toFixed(2)} ft from the Bridge CL) at this bearing line.">G${k+1}@${(o-bridgeCL()).toFixed(2)}</th>`);
   h+='</tr></thead><tbody>';
   data.forEach(r=>{
     h+=`<tr><td class="lbl" style="color:var(--cyan)">${r.label}</td><td class="lbl">${formatStation(r.sta)}</td><td>${r.skew.toFixed(1)}</td><td class="lbl">${r.span}</td>`;
     // map each global girder column to this span's seat (by index)
-    gcols.forEach((o,k)=>{ const s=r.seats[k]; h+=`<td>${s?s.seatZ.toFixed(3):'—'}</td>`; });
+    gcols.forEach((o,k)=>{ const s=r.seats[k]; h+=`<td>${s?s.seatZ.toFixed(2):'—'}</td>`; });
     h+='</tr>';
   });
   h+='</tbody></table><p class="note">Beam-seat elevations at each bearing line. Columns G1..Gn use the global girder set; each value resolves camber/beam-depth/bearing for that girder in that bearing\u2019s span.</p>';
@@ -2022,6 +2098,19 @@ document.getElementById('val_run').addEventListener('click',runValidation);
 document.getElementById('val_add').addEventListener('click',()=>{ VALPTS.push({staStr:'0+00.00',off:0,expZ:0}); renderValTable(); });
 document.getElementById('gen_spans').addEventListener('click',()=>{ seedSpans(Math.max(1,+document.getElementById('nspans').value)); renderSubTable(); renderSpanTable(); compute(); });
 ['rep_mode','rep_div'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{ if(ENG) buildTable(); }));
+document.getElementById('colfilt_toggle').addEventListener('click',()=>{
+  const p=document.getElementById('colfilt_panel'); const open=p.style.display!=='none';
+  p.style.display=open?'none':'block';
+  document.getElementById('colfilt_toggle').innerHTML=(open?'&#9656;':'&#9662;')+' Columns';
+  if(!open) renderColFilter();
+});
+document.querySelectorAll('input[data-grp]').forEach(g=>g.addEventListener('change',()=>{
+  const grp=g.dataset.grp; const on=g.checked;
+  tableColumns().forEach(c=>{ if(colGroup(c.key)===grp){ if(on) COLHIDE.delete(c.key); else COLHIDE.add(c.key); } });
+  renderColFilter(); if(ENG) buildTable();
+}));
+document.getElementById('colfilt_all').addEventListener('click',()=>{ COLHIDE.clear(); renderColFilter(); if(ENG) buildTable(); });
+document.getElementById('colfilt_none').addEventListener('click',()=>{ tableColumns().forEach(c=>COLHIDE.add(c.key)); renderColFilter(); if(ENG) buildTable(); });
 document.getElementById('divs').addEventListener('change',()=>{ if(ENG) drawHeatmap(); });
 let _heatResizeT=null;
 window.addEventListener('resize',()=>{ clearTimeout(_heatResizeT); _heatResizeT=setTimeout(()=>{ if(ENG) drawHeatmap(); },120); });

@@ -38,6 +38,7 @@
   fieldset { border: 1px solid var(--graphite); border-radius: 2px; margin: 0 0 14px; padding: 10px 12px 12px; background: rgba(255,255,255,.18); }
   legend { font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-soft); padding: 0 6px; }
   label { display: block; font-size: 11px; color: var(--ink-soft); margin: 8px 0 2px; letter-spacing: .03em; }
+  .unit { color: var(--oxide); font-weight: 600; letter-spacing: 0; }
   input[type=number],input[type=text],select,textarea { width: 100%; padding: 5px 7px; border: 1px solid var(--graphite);
     background: var(--paper); color: var(--ink); border-radius: 2px; font-size: 13px; }
   textarea { line-height: 1.5; resize: vertical; }
@@ -133,8 +134,8 @@
       <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px;">
         <div><label>Start station</label><input type="text" id="h_sta0" value="0+00.00" placeholder="100+00.00" title="Station of the point of beginning, in NNN+NN.NN format (e.g. 100+00.00 = 10000 ft). All downstream stationing is measured from here."></div>
         <div><label>Start bearing</label><input type="text" id="h_brg0" value="N90E" placeholder="N17°48'37&quot;E or 90" title="Direction the alignment heads at the start. Quadrant bearing (N17°48'37&quot;E) or azimuth in degrees clockwise from north (90 = due east)."></div>
-        <div><label>Northing (start)</label><input type="number" id="h_y0" value="0" step="0.001" title="Survey northing (Y coordinate) of the point of beginning, in feet."></div>
-        <div><label>Easting (start)</label><input type="number" id="h_x0" value="0" step="0.001" title="Survey easting (X coordinate) of the point of beginning, in feet."></div>
+        <div><label>Northing (start) <span class="unit">(ft)</span></label><input type="number" id="h_y0" value="0" step="0.001" title="Survey northing (Y coordinate) of the point of beginning, in feet."></div>
+        <div><label>Easting (start) <span class="unit">(ft)</span></label><input type="number" id="h_x0" value="0" step="0.001" title="Survey easting (X coordinate) of the point of beginning, in feet."></div>
       </div>
       <p class="note">Station NNN+NN.NN. Bearing as quadrant DMS (N17°48'37"E) or azimuth degrees. Northing→Y, Easting→X. Positive R curves right.</p>
     </fieldset>
@@ -203,11 +204,11 @@
           <legend>global default</legend>
           <div class="row2">
             <div><label>Mode</label><select id="x_mode_global" title="Crown = deck falls both directions from the crown point (normal road section). Superelevation = deck is a single planar grade across the full width (banked through a curve)."><option value="crown">crown</option><option value="super">superelevation</option></select></div>
-            <div><label>Rate (decimal)</label><input type="number" id="x_rate_global" value="0.02" step="0.001" title="Cross slope as a decimal (0.02 = 2%). For crown, the fall on each side; for super, the planar grade across the deck."></div>
+            <div><label>Cross-slope rate <span class="unit">(decimal, 0.02=2%)</span></label><input type="number" id="x_rate_global" value="0.02" step="0.001" title="Cross slope as a decimal (0.02 = 2%). For crown, the fall on each side; for super, the planar grade across the deck."></div>
           </div>
           <div class="row2">
-            <div><label>Crown offset (from PGL)</label><input type="number" id="crown_off" value="0" step="0.1" title="Transverse offset (ft) of the crown high point measured from the PGL. 0 = crown on the PGL. The deck equals the profile elevation at the PGL (offset 0) and falls away from the crown."></div>
-            <div><label>Bridge CL offset (from PGL)</label><input type="number" id="bcl_off" value="0" step="0.1" title="Transverse offset (ft) of the bridge centerline measured from the PGL. A reported reference line; does not affect deck geometry."></div>
+            <div><label>Crown offset, from PGL <span class="unit">(ft)</span></label><input type="number" id="crown_off" value="0" step="0.1" title="Transverse offset (ft) of the crown high point measured from the PGL. 0 = crown on the PGL. The deck equals the profile elevation at the PGL (offset 0) and falls away from the crown."></div>
+            <div><label>Bridge CL offset, from PGL <span class="unit">(ft)</span></label><input type="number" id="bcl_off" value="0" step="0.1" title="Transverse offset (ft) of the bridge centerline measured from the PGL. A reported reference line; does not affect deck geometry."></div>
           </div>
           <input type="hidden" id="x_pivot" value="0">
           <p class="note">The <strong>PGL = baseline = reference line</strong>, fixed at offset 0 — the deck elevation equals the vertical profile elevation here. The <strong>crown</strong> (deck high point) and <strong>bridge CL</strong> are each entered as offsets from the PGL; enter 0 for either to place it on the PGL. Per-unit cross-slope overrides set in the table below.</p>
@@ -219,12 +220,12 @@
           <div style="overflow-x:auto;"><table class="subtbl" id="girder_tbl"></table></div>
           <button class="sm ghost" id="girder_add" style="margin:8px 0;">+ Girder</button>
           <div class="row2">
-            <div><label>Deck edge LEFT (offset)</label><input type="number" id="edge_l" value="-24" step="0.1" title="Transverse offset (ft from the Bridge CL) of the left deck edge. Negative = left of the Bridge CL."></div>
-            <div><label>Deck edge RIGHT (offset)</label><input type="number" id="edge_r" value="24" step="0.1" title="Transverse offset (ft from the Bridge CL) of the right deck edge. Positive = right of the Bridge CL."></div>
+            <div><label>Deck edge LEFT, from Bridge CL <span class="unit">(ft)</span></label><input type="number" id="edge_l" value="-24" step="0.1" title="Transverse offset (ft from the Bridge CL) of the left deck edge. Negative = left of the Bridge CL."></div>
+            <div><label>Deck edge RIGHT, from Bridge CL <span class="unit">(ft)</span></label><input type="number" id="edge_r" value="24" step="0.1" title="Transverse offset (ft from the Bridge CL) of the right deck edge. Positive = right of the Bridge CL."></div>
           </div>
           <div class="row2">
-            <div><label>Curb LEFT (offset)</label><input type="number" id="curb_l" value="-21" step="0.1" placeholder="opt" title="Transverse offset (ft from the Bridge CL) of the left curb line. Used for curb elevations in the output. Can be overridden per support in the substructure table."></div>
-            <div><label>Curb RIGHT (offset)</label><input type="number" id="curb_r" value="21" step="0.1" placeholder="opt" title="Transverse offset (ft from the Bridge CL) of the right curb line. Used for curb elevations in the output. Can be overridden per support in the substructure table."></div>
+            <div><label>Curb LEFT, from Bridge CL <span class="unit">(ft)</span></label><input type="number" id="curb_l" value="-21" step="0.1" placeholder="opt" title="Transverse offset (ft from the Bridge CL) of the left curb line. Used for curb elevations in the output. Can be overridden per support in the substructure table."></div>
+            <div><label>Curb RIGHT, from Bridge CL <span class="unit">(ft)</span></label><input type="number" id="curb_r" value="21" step="0.1" placeholder="opt" title="Transverse offset (ft from the Bridge CL) of the right curb line. Used for curb elevations in the output. Can be overridden per support in the substructure table."></div>
           </div>
           <p class="note"><strong>Girders, deck edges, and curbs are all measured from the Bridge CL</strong> (the center of the bridge), so they're symmetric about it by default. The Bridge CL itself is positioned relative to the PGL by the <em>Bridge CL offset</em> field above — changing that slides the whole deck (edges, girders, curbs) together. Per-span edge overrides and per-support curb offsets are in the substructure table.</p>
         </fieldset>
@@ -233,19 +234,19 @@
         <fieldset>
           <legend>pavement &amp; top of deck → beam seat</legend>
           <div class="row2">
-            <div><label>HMA overlay thickness</label><input type="number" id="d_hma" value="0" step="0.001" title="Hot-mix asphalt (wearing surface) thickness (ft). The vertical profile / PGL is taken to TOP OF PAVEMENT; top-of-deck = profile elevation − this thickness, applied uniformly across the section. Enter 0 for a bare deck with no overlay."></div>
+            <div><label>HMA overlay thickness <span class="unit">(in)</span></label><input type="number" id="d_hma" value="0" step="0.125" title="Hot-mix asphalt (wearing surface) thickness, in INCHES. The vertical profile / PGL is taken to TOP OF PAVEMENT; top-of-deck = profile elevation − this thickness, applied uniformly across the section. Enter 0 for a bare deck with no overlay."></div>
             <div></div>
           </div>
           <p class="note" style="margin-top:0">The vertical profile and PGL are defined at <strong>top of pavement (top of HMA)</strong>. The top-of-deck (structural surface) is the profile elevation minus the HMA thickness. Beam seats hang off top-of-deck, so they drop with it automatically.</p>
-          <p class="note" style="margin-top:0">Beam seat = top-of-deck − deck thickness − (min haunch + camber) − beam depth − bearing assembly. Camber is the positive midspan ordinate; it lowers the seat.</p>
+          <p class="note" style="margin-top:0">Beam seat = top-of-deck − deck thickness − (min haunch + camber) − beam depth − bearing assembly. Camber is the positive midspan ordinate; it lowers the seat. <strong>All depths on this panel are in inches.</strong></p>
           <div class="row2">
-            <div><label>Deck structural thickness</label><input type="number" id="d_slab" value="0.667" step="0.001" title="Minimum structural thickness of the deck slab (ft), constant across the section. Subtracted from top-of-deck to reach the bottom of the deck."></div>
-            <div><label>Minimum haunch</label><input type="number" id="d_haunch" value="0.125" step="0.001" title="Minimum haunch (ft) between bottom of deck and top of beam, occurring at the point of maximum camber. At the bearings the haunch becomes minimum haunch + camber."></div>
+            <div><label>Deck structural thickness <span class="unit">(in)</span></label><input type="number" id="d_slab" value="8" step="0.125" title="Minimum structural thickness of the deck slab, in INCHES, constant across the section. Subtracted from top-of-deck to reach the bottom of the deck."></div>
+            <div><label>Minimum haunch <span class="unit">(in)</span></label><input type="number" id="d_haunch" value="1.5" step="0.125" title="Minimum haunch, in INCHES, between bottom of deck and top of beam, occurring at the point of maximum camber. At the bearings the haunch becomes minimum haunch + camber."></div>
           </div>
           <div class="row3">
-            <div><label>Beam depth (default)</label><input type="number" id="d_beam" value="3.0" step="0.01" title="Overall beam/girder depth (ft), top of beam to bottom of beam. Default; can be overridden per beam and per span below."></div>
-            <div><label>Bearing assy (default)</label><input type="number" id="d_bearing" value="0.25" step="0.001" title="Bearing assembly thickness (ft) from bottom of beam to top of substructure concrete (the beam seat). Default; can be overridden per beam and per span below."></div>
-            <div><label>Camber (default)</label><input type="number" id="d_camber" value="0" step="0.001" title="Midspan camber ordinate (ft), entered positive (beam bows up at midspan). Lowers the beam seat by this amount at the bearings. Default; can be overridden per beam and per span below."></div>
+            <div><label>Beam depth (default) <span class="unit">(in)</span></label><input type="number" id="d_beam" value="36" step="0.25" title="Overall beam/girder depth, in INCHES, top of beam to bottom of beam. Default; can be overridden per beam and per span below."></div>
+            <div><label>Bearing assy (default) <span class="unit">(in)</span></label><input type="number" id="d_bearing" value="3" step="0.125" title="Bearing assembly thickness, in INCHES, from bottom of beam to top of substructure concrete (the beam seat). Default; can be overridden per beam and per span below."></div>
+            <div><label>Camber (default) <span class="unit">(in)</span></label><input type="number" id="d_camber" value="0" step="0.125" title="Midspan camber ordinate, in INCHES, entered positive (beam bows up at midspan). Lowers the beam seat by this amount at the bearings. Default; can be overridden per beam and per span below."></div>
           </div>
           <div style="margin-top:10px">
             <button class="sm ghost" id="ovr_toggle" type="button">▸ Per-beam / per-span overrides</button>
@@ -540,10 +541,11 @@ function depthGlobal(q){
 }
 // resolve a per-beam quantity for beam index bi (0-based into the span's girder set) in a given span
 function resolveDepth(q, bi, span){
-  const ks=bi+','+span;
-  const pbs=PERBEAMSPAN[q]||{}; if(pbs[ks]!=null && pbs[ks]!=='') return +pbs[ks];
-  const pb=PERBEAM[q]||{};      if(pb[bi]!=null && pb[bi]!=='')   return +pb[bi];
-  return depthGlobal(q);
+  // returns FEET (inputs are entered in inches)
+  const ks=bi+','+span; const IN2FT=1/12;
+  const pbs=PERBEAMSPAN[q]||{}; if(pbs[ks]!=null && pbs[ks]!=='') return +pbs[ks]*IN2FT;
+  const pb=PERBEAM[q]||{};      if(pb[bi]!=null && pb[bi]!=='')   return +pb[bi]*IN2FT;
+  return depthGlobal(q)*IN2FT;
 }
 
 // effective curve length: from L directly, or from R*delta when curveMode='delta'
@@ -664,8 +666,10 @@ function buildEngine(){
   // PGL = Baseline = Reference = offset 0 (always). Crown is an offset from the PGL.
   const crownOff=+(document.getElementById('crown_off')?.value||0);
   const xsec=buildCrossSection(gMode,gRate,ctrls,0,crownOff);
-  const depths={slab:+cfg.d_slab, minHaunch:+cfg.d_haunch, beam:+cfg.d_beam,
-                bearing:+(cfg.d_bearing||0), camber:+(cfg.d_camber||0), hma:+(cfg.d_hma||0)};
+  // Superstructure depth inputs are entered in INCHES; convert to feet for the engine.
+  const IN2FT=1/12;
+  const depths={slab:+cfg.d_slab*IN2FT, minHaunch:+cfg.d_haunch*IN2FT, beam:+cfg.d_beam*IN2FT,
+                bearing:+(cfg.d_bearing||0)*IN2FT, camber:+(cfg.d_camber||0)*IN2FT, hma:+(cfg.d_hma||0)*IN2FT};
   function getDeckPoint(sta,offset){
     const a=align.at(sta); const nrm=a.brg+Math.PI/2;
     const x=a.x+Math.sin(nrm)*offset, y=a.y+Math.cos(nrm)*offset;
@@ -1676,7 +1680,8 @@ function renderOvrGrid(){
   const su=sortedUnits(); const nSpan=Math.max(0,su.length-1);
   if(nBeam===0 || nSpan===0){ t.innerHTML='<tbody><tr><td class="lbl">Define girders and spans first.</td></tr></tbody>'; return; }
   const gdef=depthGlobal(q);
-  let h='<thead><tr><th>beam＼span</th>';
+  const qlabel = q==='camber'?'Camber':(q==='beam'?'Beam depth':'Bearing assy');
+  let h=`<thead><tr><th>${qlabel} (in) — beam＼span</th>`;
   for(let s=1;s<=nSpan;s++) h+=`<th>Span ${s}</th>`;
   h+='</tr></thead><tbody>';
   for(let bi=0;bi<nBeam;bi++){
@@ -1689,7 +1694,7 @@ function renderOvrGrid(){
       const pb=(PERBEAM[q]||{})[bi];
       const inherited = (pb!=null&&pb!=='')? +pb : gdef;
       const val = hasPBS ? pbs : '';
-      h+=`<td><input type="number" class="ovr${hasPBS?' edited':''}" data-bi="${bi}" data-s="${s}" value="${val}" step="0.001" style="width:62px" placeholder="${(+inherited).toFixed(3)}" title="Default ${(+inherited).toFixed(3)} — type to override"></td>`;
+      h+=`<td><input type="number" class="ovr${hasPBS?' edited':''}" data-bi="${bi}" data-s="${s}" value="${val}" step="0.125" style="width:62px" placeholder="${(+inherited).toFixed(2)}" title="Inches. Default ${(+inherited).toFixed(2)} in — type to override"></td>`;
     }
     h+='</tr>';
   }

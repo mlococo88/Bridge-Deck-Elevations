@@ -231,7 +231,12 @@
 
         <h2 class="sec">Superstructure Depths</h2>
         <fieldset>
-          <legend>top of deck → beam seat</legend>
+          <legend>pavement &amp; top of deck → beam seat</legend>
+          <div class="row2">
+            <div><label>HMA overlay thickness</label><input type="number" id="d_hma" value="0" step="0.001" title="Hot-mix asphalt (wearing surface) thickness (ft). The vertical profile / PGL is taken to TOP OF PAVEMENT; top-of-deck = profile elevation − this thickness, applied uniformly across the section. Enter 0 for a bare deck with no overlay."></div>
+            <div></div>
+          </div>
+          <p class="note" style="margin-top:0">The vertical profile and PGL are defined at <strong>top of pavement (top of HMA)</strong>. The top-of-deck (structural surface) is the profile elevation minus the HMA thickness. Beam seats hang off top-of-deck, so they drop with it automatically.</p>
           <p class="note" style="margin-top:0">Beam seat = top-of-deck − deck thickness − (min haunch + camber) − beam depth − bearing assembly. Camber is the positive midspan ordinate; it lowers the seat.</p>
           <div class="row2">
             <div><label>Deck structural thickness</label><input type="number" id="d_slab" value="0.667" step="0.001" title="Minimum structural thickness of the deck slab (ft), constant across the section. Subtracted from top-of-deck to reach the bottom of the deck."></div>
@@ -646,7 +651,7 @@ let ENG=null, ACTIVE_STA=null;
 function readCfg(){ const g=id=>document.getElementById(id).value; return {
   h_sta0:g('h_sta0'),h_x0:g('h_x0'),h_y0:g('h_y0'),h_brg0:g('h_brg0'),h_elems:elemsToText(),
   v_pvis:pvisToText(),x_pivot:g('x_pivot'),d_slab:g('d_slab'),d_haunch:g('d_haunch'),d_beam:g('d_beam'),
-  d_bearing:g('d_bearing'),d_camber:g('d_camber') }; }
+  d_bearing:g('d_bearing'),d_camber:g('d_camber'),d_hma:g('d_hma') }; }
 
 function buildEngine(){
   syncProfile();   // regenerate PVIs from the single vertical-profile table
@@ -660,12 +665,13 @@ function buildEngine(){
   const crownOff=+(document.getElementById('crown_off')?.value||0);
   const xsec=buildCrossSection(gMode,gRate,ctrls,0,crownOff);
   const depths={slab:+cfg.d_slab, minHaunch:+cfg.d_haunch, beam:+cfg.d_beam,
-                bearing:+(cfg.d_bearing||0), camber:+(cfg.d_camber||0)};
+                bearing:+(cfg.d_bearing||0), camber:+(cfg.d_camber||0), hma:+(cfg.d_hma||0)};
   function getDeckPoint(sta,offset){
     const a=align.at(sta); const nrm=a.brg+Math.PI/2;
     const x=a.x+Math.sin(nrm)*offset, y=a.y+Math.cos(nrm)*offset;
+    // profile/PGL is top-of-pavement; top-of-deck = profile + cross-slope − HMA overlay
     const zb=prof.elevAt(sta); const dz=xsec.dz(sta,offset);
-    return { x, y, z:zb+dz, bearing:a.brg }; }
+    return { x, y, z:zb+dz-depths.hma, bearing:a.brg }; }
   // Beam seat = top-of-deck − deck thickness − (min haunch + camber) − beam depth − bearing assembly.
   // ctx (optional) = {bi, span} selects per-beam-per-span camber/beam-depth/bearing; absent → globals.
   function getBeamSeat(sta,offset,ctx){
@@ -2016,7 +2022,7 @@ let _heatResizeT=null;
 window.addEventListener('resize',()=>{ clearTimeout(_heatResizeT); _heatResizeT=setTimeout(()=>{ if(ENG) drawHeatmap(); },120); });
 ['ly_fill','ly_align','ly_gird','ly_edge','ly_sub','ly_brg','ly_sta','ly_gpt','ly_elev'].forEach(id=>{
   const el=document.getElementById(id); if(el) el.addEventListener('change',()=>{ if(ENG) drawHeatmap(); }); });
-['x_mode_global','x_rate_global','crown_off','bcl_off','edge_l','edge_r','curb_l','curb_r','d_slab','d_haunch','d_beam','d_bearing','d_camber'].forEach(id=>
+['x_mode_global','x_rate_global','crown_off','bcl_off','edge_l','edge_r','curb_l','curb_r','d_slab','d_haunch','d_beam','d_bearing','d_camber','d_hma'].forEach(id=>
   document.getElementById(id).addEventListener('change',()=>{ renderOvrGrid(); renderSpanTable(); if(ENG) compute(); }));
 document.getElementById('ovr_toggle').addEventListener('click',()=>{
   const p=document.getElementById('ovr_panel'); const open=p.style.display!=='none';
@@ -2130,7 +2136,7 @@ const STORAGE_KEY = 'bridgeGeomEngine.project.v1';
 const LIBRARY_KEY = 'bridgeGeomEngine.library.v1';
 let CURRENT_NAME = null; // name of the loaded library entry, if any
 const SCALAR_IDS = ['h_sta0','h_x0','h_y0','h_brg0','nspans','x_mode_global','x_rate_global',
-  'x_pivot','crown_off','bcl_off','edge_l','edge_r','curb_l','curb_r','d_slab','d_haunch','d_beam','d_bearing','d_camber','divs','rep_mode','rep_div','val_tol'];
+  'x_pivot','crown_off','bcl_off','edge_l','edge_r','curb_l','curb_r','d_slab','d_haunch','d_beam','d_bearing','d_camber','d_hma','divs','rep_mode','rep_div','val_tol'];
 
 function serializeProject(){
   const scalars={}; SCALAR_IDS.forEach(id=>{ const el=document.getElementById(id); if(el) scalars[id]= el.type==='checkbox'?el.checked:el.value; });

@@ -101,7 +101,7 @@
     <span class="note" style="text-transform:none;">Bridge:</span>
     <span class="pill" id="cur_name">(unsaved)</span>
     <button class="sm" id="proj_savelib" title="Save the current bridge to the library (updates the loaded entry, or prompts for a name).">Save</button>
-    <button class="sm ghost" id="proj_saveas" title="Save the current bridge under a new name.">Save As</button>
+    <button class="sm ghost" id="proj_saveas" title="Save the current bridge as a new named entry in the library.">Save As New</button>
     <button class="sm ghost" id="lib_toggle" type="button" title="Open the saved-bridge library.">&#9656; Library</button>
     <button class="sm ghost" id="proj_new" title="Clear to a fresh demo bridge.">New</button>
     <span class="sep" style="display:inline-block;width:1px;height:18px;background:var(--graphite);margin:0 2px;"></span>
@@ -2234,7 +2234,7 @@ const SCALAR_IDS = ['h_sta0','h_x0','h_y0','h_brg0','nspans','x_mode_global','x_
 
 function serializeProject(){
   const scalars={}; SCALAR_IDS.forEach(id=>{ const el=document.getElementById(id); if(el) scalars[id]= el.type==='checkbox'?el.checked:el.value; });
-  return { version:1, savedAt:new Date().toISOString(),
+  return { version:1, savedAt:new Date().toISOString(), name:CURRENT_NAME,
     ELEMS, GIRDERS, UNITS, SPAN_OV, VPIS, PERBEAM, PERBEAMSPAN, VALPTS, scalars, activeSta:ACTIVE_STA };
 }
 function applyProject(p){
@@ -2269,12 +2269,20 @@ function applyProject(p){
 
 let _saveTimer=null, _storageOK=true, _dirty=false, _autosaveArmed=false;
 function setStatus(msg){ const el=document.getElementById('save_status'); if(el) el.textContent=msg; }
+function storageWorks(){
+  // probe localStorage once; some sandboxed/preview contexts throw on access
+  try { const k='__bge_probe__'; localStorage.setItem(k,'1'); localStorage.removeItem(k); return true; }
+  catch(e){ return false; }
+}
 function saveNow(){ // immediate, non-debounced write
   if(!_storageOK) return false;
+  let payload;
+  try { payload=JSON.stringify(serializeProject()); }
+  catch(e){ /* transient serialize error during render churn — do NOT disable autosave */ return false; }
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeProject()));
+    localStorage.setItem(STORAGE_KEY, payload);
     _dirty=false; const t=new Date(); setStatus('autosaved '+t.toLocaleTimeString()); return true;
-  } catch(e){ _storageOK=false; setStatus('autosave unavailable here — use Export JSON'); return false; }
+  } catch(e){ _storageOK=false; setStatus('autosave unavailable here (browser storage blocked) — use Export JSON'); return false; }
 }
 function autosave(){
   if(!_storageOK) return;
@@ -2329,11 +2337,11 @@ function libSave(name){
   if(!name) return false;
   const lib=libRead(); const proj=serializeProject(); proj.name=name;
   lib[name]=proj; if(!libWrite(lib)) return false;
-  CURRENT_NAME=name; updateNameDisplay(); renderLibrary(); setStatus('saved \u201c'+name+'\u201d to library'); return true;
+  CURRENT_NAME=name; updateNameDisplay(); renderLibrary(); saveNow(); setStatus('saved \u201c'+name+'\u201d to library'); return true;
 }
 function libLoad(name){
   const lib=libRead(); const p=lib[name]; if(!p){ setStatus('not found'); return; }
-  if(applyProject(p)){ CURRENT_NAME=name; updateNameDisplay(); renderLibrary(); setStatus('loaded \u201c'+name+'\u201d'); autosave(); }
+  if(applyProject(p)){ CURRENT_NAME=name; updateNameDisplay(); renderLibrary(); saveNow(); setStatus('loaded \u201c'+name+'\u201d'); }
 }
 function libDelete(name){
   const lib=libRead(); if(!(name in lib)) return;
@@ -2427,11 +2435,12 @@ document.getElementById('lib_toggle').addEventListener('click', ()=>{
 });
 
 // boot: build a minimal engine so renders have something, then restore the last session if present.
+_storageOK = storageWorks();
 seedSpans(2);
 ENG=buildEngine();
-const _restored = restoreOnOpen();
+const _restored = _storageOK ? restoreOnOpen() : false;
 if(!_restored){
-  // no saved session — set up the demo bridge
+  // no saved session (or storage unavailable) — set up the demo bridge
   (function(){ const su=sortedUnits(); if(su[0])su[0].sta=0; if(su[1])su[1].sta=500; if(su[2])su[2].sta=1000; if(UNITS[1]) UNITS[1].skew=15; })();
   renderElemTable(); renderVProfTable(); renderGirderTable(); renderSubTable(); renderSpanTable(); renderOvrGrid(); renderValTable();
   compute();
@@ -2439,7 +2448,8 @@ if(!_restored){
 updateNameDisplay(); renderLibrary();
 armAutosave();
 // ensure there is always a snapshot in storage from the first moment, so the next refresh restores
-saveNow();
+if(_storageOK){ saveNow(); }
+else { setStatus('autosave OFF — browser storage blocked here. Use Export JSON to save.'); }
 </script>
 </body>
 </html>
